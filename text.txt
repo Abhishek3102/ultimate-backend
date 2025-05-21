@@ -1,67 +1,31 @@
-/*
-import mongoose, {isValidObjectId} from "mongoose"
-import {Playlist} from "../models/playlist.model.js"
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
+This Node.js module defines several controller functions for managing **playlists** in a MongoDB-backed application using **Mongoose**. These functions are likely used in an Express.js REST API for a video platform or music service. Let's go through each part of the code **in detail**.
 
+---
 
-const createPlaylist = asyncHandler(async (req, res) => {
-    const {name, description} = req.body
+## 🔧 Imports
 
-    //TODO: create playlist
-})
-
-const getUserPlaylists = asyncHandler(async (req, res) => {
-    const {userId} = req.params
-    //TODO: get user playlists
-})
-
-const getPlaylistById = asyncHandler(async (req, res) => {
-    const {playlistId} = req.params
-    //TODO: get playlist by id
-})
-
-const addVideoToPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params
-})
-
-const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
-    const {playlistId, videoId} = req.params
-    // TODO: remove video from playlist
-
-})
-
-const deletePlaylist = asyncHandler(async (req, res) => {
-    const {playlistId} = req.params
-    // TODO: delete playlist
-})
-
-const updatePlaylist = asyncHandler(async (req, res) => {
-    const {playlistId} = req.params
-    const {name, description} = req.body
-    //TODO: update playlist
-})
-
-export {
-    createPlaylist,
-    getUserPlaylists,
-    getPlaylistById,
-    addVideoToPlaylist,
-    removeVideoFromPlaylist,
-    deletePlaylist,
-    updatePlaylist
-}
-
-*/
-
+```js
 import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+```
 
-// ✅ Create a new playlist
+### Explanation:
+
+* `mongoose`: MongoDB ODM for Node.js.
+* `isValidObjectId`: Checks if a string is a valid MongoDB ObjectId.
+* `Playlist`: The Mongoose model for the playlist collection.
+* `ApiError`: A custom error class for consistent error handling.
+* `ApiResponse`: A wrapper for consistent success response formatting.
+* `asyncHandler`: A utility function to wrap async functions and forward errors to Express’s error middleware.
+
+---
+
+## ✅ 1. **Create Playlist**
+
+```js
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
@@ -79,26 +43,44 @@ const createPlaylist = asyncHandler(async (req, res) => {
     new ApiResponse(201, playlist, "Playlist created successfully")
   );
 });
+```
 
-// ✅ Get all playlists created by a specific user
+### What it does:
+
+* Creates a new playlist with `name`, `description`, and `owner` (from authenticated `req.user`).
+* Returns 201 Created with the playlist data.
+
+---
+
+## ✅ 2. **Get All Playlists by a User**
+
+```js
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
   if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid user ID");
   }
-  
-  // Find all playlists in the database where the 'owner' field matches the provided userId,
-  // then populate the 'videos' field of each playlist with related video documents,
-  // but only include the 'title' and 'thumbnail' fields from each populated video.
-  const playlists = await Playlist.find({ owner: userId }).populate("videos", "title thumbnail");
+
+  const playlists = await Playlist.find({ owner: userId })
+    .populate("videos", "title thumbnail");
 
   return res.status(200).json(
     new ApiResponse(200, playlists, "User playlists fetched successfully")
   );
 });
+```
 
-// ✅ Get a single playlist by ID
+### What it does:
+
+* Fetches all playlists owned by a given `userId`.
+* Populates the `videos` field with `title` and `thumbnail`.
+
+---
+
+## ✅ 3. **Get a Single Playlist by ID**
+
+```js
 const getPlaylistById = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
 
@@ -118,8 +100,18 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     new ApiResponse(200, playlist, "Playlist fetched successfully")
   );
 });
+```
 
-// ✅ Add a video to a playlist
+### What it does:
+
+* Returns detailed info for a specific playlist.
+* Includes `owner` (with `username`, `avatar`) and `videos` with details.
+
+---
+
+## ✅ 4. **Add Video to Playlist**
+
+```js
 const addVideoToPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
 
@@ -133,12 +125,10 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Playlist not found");
   }
 
-  // Only the owner can modify their playlist
   if (playlist.owner.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "You are not authorized to modify this playlist");
   }
 
-  // Prevent adding duplicates
   if (playlist.videos.includes(videoId)) {
     throw new ApiError(400, "Video is already in the playlist");
   }
@@ -150,8 +140,21 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     new ApiResponse(200, playlist, "Video added to playlist successfully")
   );
 });
+```
 
-// ✅ Remove a video from a playlist
+### What it does:
+
+* Adds a `videoId` to a `playlistId` **only if**:
+
+  * Playlist exists.
+  * Authenticated user is the owner.
+  * The video isn’t already in the playlist.
+
+---
+
+## ✅ 5. **Remove Video from Playlist**
+
+```js
 const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, videoId } = req.params;
 
@@ -179,8 +182,19 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
     new ApiResponse(200, playlist, "Video removed from playlist successfully")
   );
 });
+```
 
-// ✅ Delete a playlist
+### What it does:
+
+* Removes a specific `videoId` from a `playlistId`.
+* Only the owner can perform this.
+* Filters the video out of the `videos` array.
+
+---
+
+## ✅ 6. **Delete Playlist**
+
+```js
 const deletePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
 
@@ -204,8 +218,18 @@ const deletePlaylist = asyncHandler(async (req, res) => {
     new ApiResponse(200, null, "Playlist deleted successfully")
   );
 });
+```
 
-// ✅ Update playlist name/description
+### What it does:
+
+* Deletes a playlist after verifying ownership.
+* Returns a 200 success with no data (`null`).
+
+---
+
+## ✅ 7. **Update Playlist (Name or Description)**
+
+```js
 const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
   const { name, description } = req.body;
@@ -223,10 +247,8 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   if (playlist.owner.toString() !== req.user._id.toString()) {
     throw new ApiError(403, "You are not authorized to update this playlist");
   }
-  
-  // If a new name is provided in the request body, update the playlist's name
+
   if (name) playlist.name = name;
-  // If a new description is provided in the request body, update the playlist's description
   if (description) playlist.description = description;
 
   await playlist.save();
@@ -235,7 +257,18 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     new ApiResponse(200, playlist, "Playlist updated successfully")
   );
 });
+```
 
+### What it does:
+
+* Allows the owner to change the `name` or `description` of a playlist.
+* Partial updates allowed (e.g. update only the name).
+
+---
+
+## 📦 Exports
+
+```js
 export {
   createPlaylist,
   getUserPlaylists,
@@ -245,3 +278,24 @@ export {
   deletePlaylist,
   updatePlaylist,
 };
+```
+
+Exports all controller functions to be used in Express routes.
+
+---
+
+## 🧠 Summary
+
+| Function                  | Purpose                               | Permissions        |
+| ------------------------- | ------------------------------------- | ------------------ |
+| `createPlaylist`          | Create a new playlist                 | Any logged-in user |
+| `getUserPlaylists`        | Get all playlists for a user          | Public (by ID)     |
+| `getPlaylistById`         | Get detailed info for one playlist    | Public             |
+| `addVideoToPlaylist`      | Add a video to a playlist             | Only owner         |
+| `removeVideoFromPlaylist` | Remove a video from a playlist        | Only owner         |
+| `deletePlaylist`          | Delete a playlist                     | Only owner         |
+| `updatePlaylist`          | Update name/description of a playlist | Only owner         |
+
+---
+
+Would you like me to help with the **model definitions**, **API routes**, or **testing setup** as well?
