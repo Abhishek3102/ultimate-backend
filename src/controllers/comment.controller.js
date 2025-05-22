@@ -25,7 +25,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
     return res.status(200).json(
         new ApiResponse(200, {
-            total,
+            totalComments,
             page : parseInt(page),
             limit : parseInt(limit),
             comments,
