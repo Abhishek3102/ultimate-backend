@@ -4,11 +4,13 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { ArrowRight, Users, Video, MessageSquare, Heart, List, UserPlus, Settings, Activity } from "lucide-react"
 import Link from "next/link"
-import { AuthProvider } from "@/components/AuthProvider"
+import { AuthProvider, useAuth } from "@/components/AuthProvider"
+import LogoutButton from "@/components/LogoutButton"
 
-function HomePage() {
+export default function HomePage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
+  const { isAuthenticated } = useAuth()
 
   useEffect(() => {
     setMounted(true)
@@ -108,51 +110,8 @@ function HomePage() {
         <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-3xl animate-pulse" />
       </div>
 
-      {/* Navigation */}
-      <motion.nav
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        className="relative z-10 p-6 flex justify-between items-center backdrop-blur-sm bg-white/10 border-b border-white/20"
-      >
-        <motion.div whileHover={{ scale: 1.1 }} className="text-2xl font-bold text-white flex items-center gap-2">
-          <Video className="text-yellow-400" />
-          ChaiTube
-        </motion.div>
-        <div className="flex gap-4">
-          <Link href="/videos">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-            >
-              <Video className="w-4 h-4" />
-              Videos
-            </motion.button>
-          </Link>
-          <Link href="/playlists">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-            >
-              <List className="w-4 h-4" />
-              Playlists
-            </motion.button>
-          </Link>
-          <Link href="/auth">
-            <motion.button
-              whileHover={{ scale: 1.05, boxShadow: "0 10px 30px rgba(168, 85, 247, 0.3)" }}
-              whileTap={{ scale: 0.95 }}
-              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-violet-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
-            >
-              Get Started
-            </motion.button>
-          </Link>
-        </div>
-      </motion.nav>
-
       {/* Hero Section */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] text-center px-6">
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] text-center px-6 pt-32">
         <motion.h1
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
@@ -177,24 +136,28 @@ function HomePage() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="flex flex-col sm:flex-row gap-4"
         >
-          <Link href="/auth">
-            <motion.button
-              whileHover={{
-                scale: 1.05,
-                boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
-                background: "linear-gradient(45deg, #8B5CF6, #EC4899, #06B6D4)",
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-semibold text-lg flex items-center gap-2 hover:shadow-2xl transition-all"
-            >
-              Start Your Journey <ArrowRight className="w-5 h-5" />
-            </motion.button>
-          </Link>
+          {isAuthenticated ? (
+            null
+          ) : (
+            <Link href="/auth">
+              <motion.button
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
+                  background: "linear-gradient(45deg, #8B5CF6, #EC4899, #06B6D4)",
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-semibold text-lg flex items-center gap-2 hover:shadow-2xl transition-all"
+              >
+                Start Your Journey <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            </Link>
+          )}
         </motion.div>
       </div>
 
       {/* Features Grid */}
-      <div className="relative z-10 px-6 py-20">
+      <div className="relative z-10 px-6 py-20 pb-32">
         <motion.h2
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -233,13 +196,5 @@ function HomePage() {
         </div>
       </div>
     </div>
-  )
-}
-
-export default function Page() {
-  return (
-    <AuthProvider>
-      <HomePage />
-    </AuthProvider>
   )
 }

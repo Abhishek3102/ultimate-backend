@@ -30,12 +30,82 @@ export {
 }
 */
 
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose from "mongoose";
 import { Tweet } from "../models/tweet.model.js";
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+
+const isValidObjectId = mongoose.isValidObjectId;
+
+// ✅ Get all tweets (Feed)
+// ✅ Get all tweets (Feed)
+const getAllTweets = asyncHandler(async (req, res) => {
+  const tweets = await Tweet.aggregate([
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              "avatar": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "comments",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: {
+          $size: "$likes",
+        },
+        commentsCount: {
+          $size: "$comments",
+        },
+        owner: {
+          $first: "$ownerDetails",
+        },
+      },
+    },
+    {
+        $project: {
+            ownerDetails: 0,
+            likes: 0,
+            comments: 0
+        }
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(200, tweets, "Tweets fetched successfully")
+  );
+});
 
 // ✅ Create a new tweet
 const createTweet = asyncHandler(async (req, res) => {
@@ -58,10 +128,52 @@ const createTweet = asyncHandler(async (req, res) => {
 });
 
 // ✅ Get all tweets from the logged-in user
+// ✅ Get all tweets from the logged-in user
 const getUserTweets = asyncHandler(async (req, res) => {
-  const tweets = await Tweet.find({ owner: req.user._id })
-    .sort({ createdAt: -1 }) // Most recent first
-    .select("content createdAt updatedAt"); // Return only important fields
+  const tweets = await Tweet.aggregate([
+    {
+      $match: {
+        owner: req.user._id,
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "comments",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: {
+          $size: "$likes",
+        },
+        commentsCount: {
+          $size: "$comments",
+        },
+      },
+    },
+    {
+        $project: {
+            likes: 0,
+            comments: 0
+        }
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ]);
 
   return res.status(200).json(
     new ApiResponse(200, tweets, "User tweets fetched successfully")
@@ -129,6 +241,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
 export {
   createTweet,
+  getAllTweets,
   getUserTweets,
   updateTweet,
   deleteTweet
