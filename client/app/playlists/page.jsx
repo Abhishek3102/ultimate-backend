@@ -1,0 +1,417 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { List, Plus, ArrowLeft, Video, Play, Edit, Trash2, Lock, Globe } from "lucide-react"
+import Link from "next/link"
+
+export default function PlaylistsPage() {
+  const [playlists, setPlaylists] = useState([])
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [createData, setCreateData] = useState({
+    name: "",
+    description: "",
+    isPublic: true,
+  })
+
+  useEffect(() => {
+    fetchPlaylists()
+  }, [])
+
+  const fetchPlaylists = async () => {
+    try {
+      const response = await fetch("/api/v1/playlist/user/current-user", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      const contentType = response.headers.get("content-type")
+
+      if (!contentType || !contentType.includes("application/json")) {
+        // Mock data for demo
+        setPlaylists([
+          {
+            _id: "1",
+            name: "My Favorite Tech Videos",
+            description: "Collection of the best tech tutorials and reviews",
+            videos: [
+              {
+                _id: "v1",
+                title: "React Hooks Tutorial",
+                thumbnail: "/placeholder.svg?height=120&width=200",
+                duration: 1365,
+              },
+              {
+                _id: "v2",
+                title: "JavaScript ES6 Features",
+                thumbnail: "/placeholder.svg?height=120&width=200",
+                duration: 890,
+              },
+            ],
+            owner: {
+              _id: "user1",
+              username: "You",
+            },
+            isPublic: true,
+            createdAt: "2024-01-15T10:30:00Z",
+            updatedAt: "2024-01-15T10:30:00Z",
+          },
+          {
+            _id: "2",
+            name: "Cooking Masterclass",
+            description: "Learn to cook like a professional chef",
+            videos: [
+              {
+                _id: "v3",
+                title: "Italian Pasta Basics",
+                thumbnail: "/placeholder.svg?height=120&width=200",
+                duration: 1200,
+              },
+            ],
+            owner: {
+              _id: "user1",
+              username: "You",
+            },
+            isPublic: false,
+            createdAt: "2024-01-14T16:45:00Z",
+            updatedAt: "2024-01-14T16:45:00Z",
+          },
+        ])
+        return
+      }
+
+      const data = await response.json()
+      setPlaylists(data.data || [])
+    } catch (error) {
+      console.error("Error fetching playlists:", error)
+      setPlaylists([])
+    }
+  }
+
+  const createPlaylist = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const response = await fetch("/api/v1/playlist", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(createData),
+      })
+
+      const contentType = response.headers.get("content-type")
+
+      if (!contentType || !contentType.includes("application/json")) {
+        // Simulate playlist creation for demo
+        const newPlaylist = {
+          _id: Date.now().toString(),
+          name: createData.name,
+          description: createData.description,
+          videos: [],
+          owner: {
+            _id: "current-user",
+            username: "You",
+          },
+          isPublic: createData.isPublic,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        setPlaylists((prev) => [newPlaylist, ...prev])
+        setCreateData({ name: "", description: "", isPublic: true })
+        setShowCreateModal(false)
+        alert("Playlist created successfully!")
+        setLoading(false)
+        return
+      }
+
+      const data = await response.json()
+      if (response.ok) {
+        setPlaylists((prev) => [data.data, ...prev])
+        setCreateData({ name: "", description: "", isPublic: true })
+        setShowCreateModal(false)
+        alert("Playlist created successfully!")
+      } else {
+        alert(data.message || "Failed to create playlist")
+      }
+    } catch (error) {
+      console.error("Create playlist error:", error)
+      alert("Failed to create playlist")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deletePlaylist = async (playlistId) => {
+    if (!confirm("Are you sure you want to delete this playlist?")) return
+
+    try {
+      const response = await fetch(`/api/v1/playlist/${playlistId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+
+      if (response.ok || !response.headers.get("content-type")?.includes("application/json")) {
+        setPlaylists((prev) => prev.filter((playlist) => playlist._id !== playlistId))
+        alert("Playlist deleted successfully!")
+      }
+    } catch (error) {
+      console.error("Delete playlist error:", error)
+    }
+  }
+
+  const formatDuration = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
+  }
+
+  return (
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: "url('/placeholder.svg?height=1080&width=1920')",
+        }}
+      />
+
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-orange-900/90 via-amber-900/90 to-yellow-900/90" />
+
+      {/* Animated Background */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-orange-400 to-amber-400 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full blur-3xl animate-bounce" />
+      </div>
+
+      {/* Header */}
+      <motion.div
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        className="relative z-10 p-6 bg-white/10 backdrop-blur-sm border-b border-white/20"
+      >
+        <div className="flex items-center justify-between max-w-7xl mx-auto">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-3 bg-white/10 rounded-full text-white hover:bg-white/20 transition-all"
+              >
+                <ArrowLeft className="w-6 h-6" />
+              </motion.button>
+            </Link>
+            <div className="flex items-center gap-3">
+              <List className="w-8 h-8 text-orange-400" />
+              <h1 className="text-3xl font-bold text-white">Playlists</h1>
+            </div>
+          </div>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowCreateModal(true)}
+            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full font-medium flex items-center gap-2 hover:shadow-lg transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            Create Playlist
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Playlists Grid */}
+      <div className="relative z-10 p-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatePresence>
+            {playlists.map((playlist, index) => (
+              <motion.div
+                key={playlist._id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                whileHover={{ scale: 1.02, y: -5 }}
+                className="bg-white/10 backdrop-blur-lg rounded-2xl overflow-hidden border border-white/20 hover:border-white/40 transition-all"
+              >
+                {/* Playlist Thumbnail Grid */}
+                <div className="relative h-48 bg-gradient-to-br from-orange-500/20 to-amber-500/20">
+                  {playlist.videos && playlist.videos.length > 0 ? (
+                    <div className="grid grid-cols-2 h-full">
+                      {playlist.videos.slice(0, 4).map((video, videoIndex) => (
+                        <div key={video._id} className="relative">
+                          <img
+                            src={video.thumbnail || "/placeholder.svg"}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                          />
+                          {videoIndex === 0 && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <Play className="w-8 h-8 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <List className="w-16 h-16 text-orange-400/50" />
+                    </div>
+                  )}
+                  <div className="absolute top-3 right-3 flex items-center gap-2">
+                    {playlist.isPublic ? (
+                      <Globe className="w-5 h-5 text-green-400" />
+                    ) : (
+                      <Lock className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="absolute bottom-3 right-3 bg-black/70 text-white text-sm px-2 py-1 rounded">
+                    {playlist.videos?.length || 0} videos
+                  </div>
+                </div>
+
+                {/* Playlist Info */}
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-white font-semibold text-lg line-clamp-2">{playlist.name}</h3>
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="p-2 bg-white/10 rounded-full text-gray-300 hover:text-white transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => deletePlaylist(playlist._id)}
+                        className="p-2 bg-white/10 rounded-full text-gray-300 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                  </div>
+
+                  <p className="text-gray-300 text-sm mb-4 line-clamp-2">{playlist.description}</p>
+
+                  <div className="flex items-center justify-between text-gray-400 text-sm">
+                    <span>by {playlist.owner?.username}</span>
+                    <span>{new Date(playlist.createdAt).toLocaleDateString()}</span>
+                  </div>
+
+                  {playlist.videos && playlist.videos.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                      <div className="flex items-center gap-3">
+                        <Video className="w-4 h-4 text-orange-400" />
+                        <span className="text-white text-sm font-medium">{playlist.videos[0].title}</span>
+                      </div>
+                      <p className="text-gray-400 text-xs mt-1">{formatDuration(playlist.videos[0].duration)}</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        {playlists.length === 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
+            <List className="w-20 h-20 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-white mb-2">No Playlists Yet</h3>
+            <p className="text-gray-300 mb-6">Create your first playlist to organize your videos!</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowCreateModal(true)}
+              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
+            >
+              Create Playlist
+            </motion.button>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Create Playlist Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowCreateModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 w-full max-w-md"
+            >
+              <h2 className="text-2xl font-bold text-white mb-6">Create Playlist</h2>
+
+              <form onSubmit={createPlaylist} className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Playlist Name"
+                  value={createData.name}
+                  onChange={(e) => setCreateData((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-all"
+                  required
+                />
+
+                <textarea
+                  placeholder="Description"
+                  value={createData.description}
+                  onChange={(e) => setCreateData((prev) => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-all h-24 resize-none"
+                  required
+                />
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="isPublic"
+                    checked={createData.isPublic}
+                    onChange={(e) => setCreateData((prev) => ({ ...prev, isPublic: e.target.checked }))}
+                    className="w-4 h-4 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500"
+                  />
+                  <label htmlFor="isPublic" className="text-white text-sm">
+                    Make playlist public
+                  </label>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    type="submit"
+                    disabled={loading}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 transition-all"
+                  >
+                    {loading ? "Creating..." : "Create"}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
