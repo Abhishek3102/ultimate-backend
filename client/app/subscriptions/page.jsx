@@ -4,107 +4,43 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { UserPlus, ArrowLeft, Users, Video, Bell, Check } from "lucide-react"
 import Link from "next/link"
+import { AuthProvider, useAuth } from "@/components/AuthProvider"
+import { api } from "@/lib/api"
 
-export default function SubscriptionsPage() {
+function SubscriptionsPageContent() {
   const [subscriptions, setSubscriptions] = useState([])
   const [suggestedChannels, setSuggestedChannels] = useState([])
   const [loading, setLoading] = useState(false)
+  const { user, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    fetchSubscriptions()
-    fetchSuggestedChannels()
-  }, [])
+    if (isAuthenticated) {
+      fetchSubscriptions()
+      fetchSuggestedChannels()
+    }
+  }, [isAuthenticated])
 
   const fetchSubscriptions = async () => {
     try {
-      const response = await fetch("/api/v1/subscriptions/c/current-user", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      const contentType = response.headers.get("content-type")
-
-      if (!contentType || !contentType.includes("application/json")) {
-        // Mock data for demo
-        setSubscriptions([
-          {
-            _id: "1",
-            channel: {
-              _id: "channel1",
-              username: "TechGuru",
-              fullName: "Tech Guru Official",
-              avatar: "/placeholder.svg?height=60&width=60",
-              subscribersCount: 125000,
-              videosCount: 89,
-            },
-            createdAt: "2024-01-15T10:30:00Z",
-          },
-          {
-            _id: "2",
-            channel: {
-              _id: "channel2",
-              username: "CookingMaster",
-              fullName: "Cooking Master Chef",
-              avatar: "/placeholder.svg?height=60&width=60",
-              subscribersCount: 89000,
-              videosCount: 156,
-            },
-            createdAt: "2024-01-14T16:45:00Z",
-          },
-        ])
-        return
-      }
-
-      const data = await response.json()
-      setSubscriptions(data.data || [])
+      setLoading(true)
+      const response = await api.getSubscriptions()
+      setSubscriptions(response.data || [])
     } catch (error) {
       console.error("Error fetching subscriptions:", error)
       setSubscriptions([])
+    } finally {
+      setLoading(false)
     }
   }
 
   const fetchSuggestedChannels = async () => {
     try {
-      const response = await fetch("/api/v1/users", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      const contentType = response.headers.get("content-type")
-
-      if (!contentType || !contentType.includes("application/json")) {
-        // Mock data for demo
-        setSuggestedChannels([
-          {
-            _id: "suggested1",
-            username: "NatureExplorer",
-            fullName: "Nature Explorer",
-            avatar: "/placeholder.svg?height=60&width=60",
-            subscribersCount: 45000,
-            videosCount: 67,
-          },
-          {
-            _id: "suggested2",
-            username: "FitnessCoach",
-            fullName: "Fitness Coach Pro",
-            avatar: "/placeholder.svg?height=60&width=60",
-            subscribersCount: 78000,
-            videosCount: 134,
-          },
-          {
-            _id: "suggested3",
-            username: "MusicProducer",
-            fullName: "Music Producer Studio",
-            avatar: "/placeholder.svg?height=60&width=60",
-            subscribersCount: 92000,
-            videosCount: 201,
-          },
-        ])
-        return
-      }
-
-      const data = await response.json()
-      setSuggestedChannels(data.data || [])
+      const response = await api.getUsers()
+      // Filter out current user and already subscribed channels
+      const subscribedChannelIds = subscriptions.map((sub) => sub.channel._id)
+      const suggested =
+        response.data?.filter((user) => user._id !== user?._id && !subscribedChannelIds.includes(user._id)) || []
+      setSuggestedChannels(suggested)
     } catch (error) {
       console.error("Error fetching suggested channels:", error)
       setSuggestedChannels([])
@@ -112,58 +48,42 @@ export default function SubscriptionsPage() {
   }
 
   const toggleSubscription = async (channelId) => {
-    setLoading(true)
+    if (!isAuthenticated) {
+      alert("Please login to subscribe to channels")
+      return
+    }
 
     try {
-      const response = await fetch(`/api/v1/subscriptions/c/${channelId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-          "Content-Type": "application/json",
-        },
-      })
+      await api.toggleSubscription(channelId)
 
-      const contentType = response.headers.get("content-type")
+      const isSubscribed = subscriptions.some((sub) => sub.channel._id === channelId)
 
-      if (!contentType || !contentType.includes("application/json")) {
-        // Simulate subscription toggle for demo
-        const isSubscribed = subscriptions.some((sub) => sub.channel._id === channelId)
-
-        if (isSubscribed) {
-          // Unsubscribe
-          setSubscriptions((prev) => prev.filter((sub) => sub.channel._id !== channelId))
-          // Move back to suggested
-          const channel = subscriptions.find((sub) => sub.channel._id === channelId)?.channel
-          if (channel) {
-            setSuggestedChannels((prev) => [...prev, channel])
-          }
-        } else {
-          // Subscribe
-          const channel = suggestedChannels.find((ch) => ch._id === channelId)
-          if (channel) {
-            setSubscriptions((prev) => [
-              ...prev,
-              {
-                _id: Date.now().toString(),
-                channel,
-                createdAt: new Date().toISOString(),
-              },
-            ])
-            setSuggestedChannels((prev) => prev.filter((ch) => ch._id !== channelId))
-          }
+      if (isSubscribed) {
+        // Unsubscribe
+        setSubscriptions((prev) => prev.filter((sub) => sub.channel._id !== channelId))
+        // Move back to suggested
+        const channel = subscriptions.find((sub) => sub.channel._id === channelId)?.channel
+        if (channel) {
+          setSuggestedChannels((prev) => [...prev, channel])
         }
-        setLoading(false)
-        return
-      }
-
-      if (response.ok) {
-        fetchSubscriptions()
-        fetchSuggestedChannels()
+      } else {
+        // Subscribe
+        const channel = suggestedChannels.find((ch) => ch._id === channelId)
+        if (channel) {
+          setSubscriptions((prev) => [
+            ...prev,
+            {
+              _id: Date.now().toString(),
+              channel,
+              createdAt: new Date().toISOString(),
+            },
+          ])
+          setSuggestedChannels((prev) => prev.filter((ch) => ch._id !== channelId))
+        }
       }
     } catch (error) {
       console.error("Subscription error:", error)
-    } finally {
-      setLoading(false)
+      alert(error.message || "Failed to toggle subscription")
     }
   }
 
@@ -172,6 +92,64 @@ export default function SubscriptionsPage() {
     if (count >= 1000) return `${(count / 1000).toFixed(1)}K`
     return count.toString()
   }
+
+  // Mock data for non-authenticated users
+  const mockSubscriptions = [
+    {
+      _id: "mock_1",
+      channel: {
+        _id: "channel1",
+        username: "TechGuru",
+        fullName: "Tech Guru Official",
+        avatar: "/placeholder.svg?height=60&width=60",
+        subscribersCount: 125000,
+        videosCount: 89,
+      },
+      createdAt: "2024-01-15T10:30:00Z",
+    },
+    {
+      _id: "mock_2",
+      channel: {
+        _id: "channel2",
+        username: "CookingMaster",
+        fullName: "Cooking Master Chef",
+        avatar: "/placeholder.svg?height=60&width=60",
+        subscribersCount: 89000,
+        videosCount: 156,
+      },
+      createdAt: "2024-01-14T16:45:00Z",
+    },
+  ]
+
+  const mockSuggestedChannels = [
+    {
+      _id: "suggested1",
+      username: "NatureExplorer",
+      fullName: "Nature Explorer",
+      avatar: "/placeholder.svg?height=60&width=60",
+      subscribersCount: 45000,
+      videosCount: 67,
+    },
+    {
+      _id: "suggested2",
+      username: "FitnessCoach",
+      fullName: "Fitness Coach Pro",
+      avatar: "/placeholder.svg?height=60&width=60",
+      subscribersCount: 78000,
+      videosCount: 134,
+    },
+    {
+      _id: "suggested3",
+      username: "MusicProducer",
+      fullName: "Music Producer Studio",
+      avatar: "/placeholder.svg?height=60&width=60",
+      subscribersCount: 92000,
+      videosCount: 201,
+    },
+  ]
+
+  const displaySubscriptions = isAuthenticated ? subscriptions : mockSubscriptions
+  const displaySuggestedChannels = isAuthenticated ? suggestedChannels : mockSuggestedChannels
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -196,7 +174,7 @@ export default function SubscriptionsPage() {
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="relative z-10 p-6 bg-white/10 backdrop-blur-sm border-b border-white/20"
+        className="relative z-10 p-6 pt-24 bg-white/10 backdrop-blur-sm border-b border-white/20"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
@@ -222,13 +200,19 @@ export default function SubscriptionsPage() {
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="mb-12">
           <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
             <Users className="w-6 h-6 text-purple-400" />
-            My Subscriptions ({subscriptions.length})
+            My Subscriptions ({displaySubscriptions.length})
           </h2>
 
-          {subscriptions.length > 0 ? (
+          {loading && isAuthenticated && (
+            <div className="flex justify-center items-center py-20">
+              <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+            </div>
+          )}
+
+          {displaySubscriptions.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
-                {subscriptions.map((subscription, index) => (
+                {displaySubscriptions.map((subscription, index) => (
                   <motion.div
                     key={subscription._id}
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -255,11 +239,11 @@ export default function SubscriptionsPage() {
                     <div className="flex items-center justify-between text-gray-300 text-sm mb-4">
                       <span className="flex items-center gap-1">
                         <Users className="w-4 h-4" />
-                        {formatSubscribers(subscription.channel.subscribersCount)} subscribers
+                        {formatSubscribers(subscription.channel.subscribersCount || 0)} subscribers
                       </span>
                       <span className="flex items-center gap-1">
                         <Video className="w-4 h-4" />
-                        {subscription.channel.videosCount} videos
+                        {subscription.channel.videosCount || 0} videos
                       </span>
                     </div>
 
@@ -268,8 +252,7 @@ export default function SubscriptionsPage() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => toggleSubscription(subscription.channel._id)}
-                        disabled={loading}
-                        className="flex-1 py-2 bg-red-500/20 text-red-300 rounded-xl font-medium hover:bg-red-500/30 transition-all border border-red-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 py-2 bg-red-500/20 text-red-300 rounded-xl font-medium hover:bg-red-500/30 transition-all border border-red-500/30 flex items-center justify-center gap-2"
                       >
                         <Check className="w-4 h-4" />
                         Subscribed
@@ -286,7 +269,7 @@ export default function SubscriptionsPage() {
                 ))}
               </AnimatePresence>
             </div>
-          ) : (
+          ) : !loading && isAuthenticated ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -296,7 +279,51 @@ export default function SubscriptionsPage() {
               <h3 className="text-xl font-bold text-white mb-2">No Subscriptions Yet</h3>
               <p className="text-gray-300">Start following creators to see their content here!</p>
             </motion.div>
-          )}
+          ) : !isAuthenticated ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displaySubscriptions.map((subscription, index) => (
+                <div
+                  key={subscription._id}
+                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20"
+                >
+                  <div className="flex items-center gap-4 mb-4">
+                    <img
+                      src={subscription.channel.avatar || "/placeholder.svg"}
+                      alt={subscription.channel.username}
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-white font-semibold text-lg">
+                        {subscription.channel.fullName || subscription.channel.username}
+                      </h3>
+                      <p className="text-gray-300 text-sm">@{subscription.channel.username}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-gray-300 text-sm mb-4">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-4 h-4" />
+                      {formatSubscribers(subscription.channel.subscribersCount)} subscribers
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Video className="w-4 h-4" />
+                      {subscription.channel.videosCount} videos
+                    </span>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <div className="flex-1 py-2 bg-red-500/20 text-red-300 rounded-xl font-medium border border-red-500/30 flex items-center justify-center gap-2">
+                      <Check className="w-4 h-4" />
+                      Subscribed
+                    </div>
+                    <div className="p-2 bg-white/10 rounded-xl text-gray-300">
+                      <Bell className="w-4 h-4" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </motion.div>
 
         {/* Suggested Channels */}
@@ -308,7 +335,7 @@ export default function SubscriptionsPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             <AnimatePresence>
-              {suggestedChannels.map((channel, index) => (
+              {displaySuggestedChannels.map((channel, index) => (
                 <motion.div
                   key={channel._id}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -333,20 +360,21 @@ export default function SubscriptionsPage() {
                   <div className="flex items-center justify-between text-gray-300 text-sm mb-4">
                     <span className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
-                      {formatSubscribers(channel.subscribersCount)} subscribers
+                      {formatSubscribers(channel.subscribersCount || 0)} subscribers
                     </span>
                     <span className="flex items-center gap-1">
                       <Video className="w-4 h-4" />
-                      {channel.videosCount} videos
+                      {channel.videosCount || 0} videos
                     </span>
                   </div>
 
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => toggleSubscription(channel._id)}
-                    disabled={loading}
-                    className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    onClick={() =>
+                      isAuthenticated ? toggleSubscription(channel._id) : alert("Please login to subscribe")
+                    }
+                    className="w-full py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
                   >
                     <UserPlus className="w-4 h-4" />
                     Subscribe
@@ -356,7 +384,7 @@ export default function SubscriptionsPage() {
             </AnimatePresence>
           </div>
 
-          {suggestedChannels.length === 0 && (
+          {displaySuggestedChannels.length === 0 && isAuthenticated && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -368,7 +396,36 @@ export default function SubscriptionsPage() {
             </motion.div>
           )}
         </motion.div>
+
+        {!isAuthenticated && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 mt-8">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20">
+              <UserPlus className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-white mb-2">Discover Amazing Creators</h3>
+              <p className="text-gray-300 mb-6">
+                Login to subscribe to your favorite channels and get personalized content!
+              </p>
+              <Link href="/auth">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
+                >
+                  Get Started
+                </motion.button>
+              </Link>
+            </div>
+          </motion.div>
+        )}
       </div>
-    </div>
+    </div >
+  )
+}
+
+export default function SubscriptionsPage() {
+  return (
+    <AuthProvider>
+      <SubscriptionsPageContent />
+    </AuthProvider>
   )
 }

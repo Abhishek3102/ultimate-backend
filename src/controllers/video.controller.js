@@ -57,36 +57,98 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 // ✅ GET all videos with search, sort, pagination, and optional filtering by userId
+// ✅ GET all videos with search, sort, pagination, and optional filtering by userId
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query = "", sortBy = "createdAt", sortType = "desc", userId } = req.query;
 
-  const filter = {
+  const matchStage = {
     isPublished: true,
     title: { $regex: query, $options: "i" }, // case-insensitive search
   };
 
   if (userId && isValidObjectId(userId)) {
-    filter.owner = userId;
+    matchStage.owner = new mongoose.Types.ObjectId(userId);
   }
 
   const sortOptions = {
     [sortBy]: sortType === "asc" ? 1 : -1,
   };
 
-  const videos = await Video.find(filter)
-    .populate("owner", "username avatar")
-    .sort(sortOptions)
-    .skip((page - 1) * limit)
-    .limit(parseInt(limit));
+  const videos = await Video.aggregate([
+    {
+      $match: matchStage
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              "avatar": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "video",
+        as: "comments",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: {
+          $size: "$likes",
+        },
+        commentsCount: {
+          $size: "$comments",
+        },
+        owner: {
+          $first: "$ownerDetails",
+        },
+      },
+    },
+    {
+      $project: {
+        ownerDetails: 0,
+        likes: 0,
+        comments: 0
+      }
+    },
+    {
+      $sort: sortOptions
+    },
+    {
+      $skip: (parseInt(page) - 1) * parseInt(limit)
+    },
+    {
+      $limit: parseInt(limit)
+    }
+  ]);
 
-  const total = await Video.countDocuments(filter);
+  const total = await Video.countDocuments(matchStage);
 
   return res.status(200).json(
     new ApiResponse(200, {
       total,
       page: parseInt(page),
       limit: parseInt(limit),
-      videos,
+      videos, // Ensure consistency with frontend expectation (paginated response)
     }, "Videos fetched successfully")
   );
 });
@@ -123,6 +185,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
 });
 
 // ✅ GET a single video by ID
+// ✅ GET a single video by ID
 const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
 
@@ -130,14 +193,79 @@ const getVideoById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video ID");
   }
 
-  const video = await Video.findById(videoId).populate("owner", "username avatar");
+  const video = await Video.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(videoId)
+      }
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              "avatar": 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "video",
+        as: "likes",
+      },
+    },
+    {
+      $lookup: {
+        from: "comments",
+        localField: "_id",
+        foreignField: "video",
+        as: "comments",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: {
+          $size: "$likes",
+        },
+        commentsCount: {
+          $size: "$comments",
+        },
+        owner: {
+          $first: "$ownerDetails",
+        },
+        isLiked: { // Check if current user liked it (if req.user exists)
+             $cond: {
+                 if: { $in: [req.user?._id, "$likes.likedBy"] },
+                 then: true,
+                 else: false
+             }
+        }
+      },
+    },
+    {
+      $project: {
+        ownerDetails: 0,
+        likes: 0,
+        comments: 0
+      }
+    }
+  ]);
 
-  if (!video) {
+  if (!video?.length) {
     throw new ApiError(404, "Video not found");
   }
 
   return res.status(200).json(
-    new ApiResponse(200, video, "Video fetched successfully")
+    new ApiResponse(200, video[0], "Video fetched successfully")
   );
 });
 

@@ -1,8 +1,10 @@
-import mongoose, {isValidObjectId} from "mongoose"
+import mongoose from "mongoose"
 import {Like} from "../models/like.model.js"
 import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
+
+const isValidObjectId = mongoose.isValidObjectId;
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const {videoId} = req.params
@@ -14,8 +16,8 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
     const alreadyLiked = await Like.findOne({
-        liked : videoId,
-        user : userId,
+        video : videoId,
+        likedBy : userId,
     });
 
     if(alreadyLiked) {
@@ -25,16 +27,13 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         );
     }
         await Like.create({
-            liked : videoId,
-            user : userId,
+            video : videoId,
+            likedBy : userId,
         });
 
         return res.status(201).json(
             new ApiResponse(201, null, "Like added to the Video")
         );
-    
-
-
 })
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
@@ -48,8 +47,8 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
     try {
         const alreadyLikedComment = await Like.findOne({
-            likedComment : commentId,
-            user : userId,
+            comment : commentId,
+            likedBy : userId,
         });
     
         if(alreadyLikedComment){
@@ -61,8 +60,8 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     
         else{
             await Like.create({
-                likedComment : commentId,
-                user : userId,
+                comment : commentId,
+                likedBy : userId,
             });
     
             return res.status(201).json(
@@ -85,19 +84,20 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
     try {
-        const alreadyLikedTweet = await Like.findOneAndDelete({
-            likedTweet : tweetId,
-            user : userId,
+        const alreadyLikedTweet = await Like.findOne({
+            tweet : tweetId,
+            likedBy : userId,
         });
 
         if(alreadyLikedTweet){
+            await alreadyLikedTweet.deleteOne();
             return res.status(200).json(
                 new ApiResponse(200, null, "Liked removed from tweet")
             );
         }
             await Like.create({
-                likedTweet : tweetId,
-                user : userId,
+                tweet : tweetId,
+                likedBy : userId,
             });
 
             return res.status(201).json(

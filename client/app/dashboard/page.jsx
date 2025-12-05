@@ -17,11 +17,12 @@ import {
   List,
   UserPlus,
   Eye,
+  TrendingUp,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AuthProvider, useAuth } from "@/components/AuthProvider"
-import { useLocalStorage } from "@/hooks/useLocalStorage"
+import { api } from "@/lib/api"
 
 function DashboardPageContent() {
   const [isEditing, setIsEditing] = useState(false)
@@ -31,57 +32,114 @@ function DashboardPageContent() {
     fullName: "",
   })
   const [loading, setLoading] = useState(false)
-  const [videos] = useLocalStorage("videos", [])
-  const [tweets] = useLocalStorage("tweets", [])
-  const [likedVideos] = useLocalStorage("likedVideos", [])
-  const [likedTweets] = useLocalStorage("likedTweets", [])
-  const [playlists] = useLocalStorage("playlists", [])
-  const [subscriptions] = useLocalStorage("subscriptions", [])
+  const [stats, setStats] = useState({
+    videos: 0,
+    tweets: 0,
+    likes: 0,
+    playlists: 0,
+    subscribers: 0,
+    subscriptions: 0,
+    totalViews: 0,
+    totalLikes: 0,
+  })
 
   const router = useRouter()
-  const { user, logout, updateUser, isAuthenticated } = useAuth()
-
-  // Calculate real stats from user data
-  const stats = {
-    videos: videos.length,
-    tweets: tweets.length,
-    likes: likedVideos.length + likedTweets.length,
-    playlists: playlists.length,
-    subscribers: Math.floor(Math.random() * 10), // This would come from backend
-    subscriptions: subscriptions.length,
-  }
+  const { user, logout, updateUser, isAuthenticated, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push("/auth")
       return
     }
 
-    setEditData({
-      username: user.username || "",
-      email: user.email || "",
-      fullName: user.fullName || "",
-    })
-  }, [user, isAuthenticated, router])
+    if (user) {
+      setEditData({
+        username: user.username || "",
+        email: user.email || "",
+        fullName: user.fullName || "",
+      })
+
+      fetchDashboardStats()
+    }
+  }, [user, isAuthenticated, authLoading, router])
+
+  const fetchDashboardStats = async () => {
+    try {
+      // Fetch real stats from multiple endpoints with error handling
+      const [videosRes, tweetsRes, likesRes, playlistsRes, subscriptionsRes] = await Promise.allSettled([
+        api.getVideos(),
+        api.getTweets(),
+        api.getLikedVideos(),
+        api.getPlaylists(),
+        api.getSubscriptions(),
+      ])
+
+      const videos = videosRes.status === "fulfilled" ? videosRes.value.data || [] : []
+      const tweets = tweetsRes.status === "fulfilled" ? tweetsRes.value.data || [] : []
+      const likedVideos = likesRes.status === "fulfilled" ? likesRes.value.data || [] : []
+      const playlists = playlistsRes.status === "fulfilled" ? playlistsRes.value.data || [] : []
+      const subscriptions = subscriptionsRes.status === "fulfilled" ? subscriptionsRes.value.data || [] : []
+
+      // Calculate total views and likes from user's videos
+      const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0)
+      const totalLikes = videos.reduce((sum, video) => sum + (video.likesCount || 0), 0)
+
+      setStats({
+        videos: videos.length,
+        tweets: tweets.length,
+        likes: likedVideos.length,
+        playlists: playlists.length,
+        subscribers: Math.floor(Math.random() * 100), // This would come from a real subscriber endpoint
+        subscriptions: subscriptions.length,
+        totalViews,
+        totalLikes,
+      })
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error)
+    }
+  }
 
   const handleLogout = async () => {
-    logout()
+    if (confirm("Are you sure you want to logout?")) {
+      await logout()
+      router.push("/")
+    }
   }
 
   const handleSaveProfile = async () => {
     setLoading(true)
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const result = await updateUser(editData)
 
-      const updatedUser = { ...user, ...editData }
-      updateUser(updatedUser)
-      setIsEditing(false)
+      if (result.success) {
+        setIsEditing(false)
+        alert("Profile updated successfully!")
+      } else {
+        alert(result.error || "Failed to update profile")
+      }
     } catch (error) {
       alert("Failed to update profile")
     } finally {
       setLoading(false)
     }
+  }
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-900 to-blue-900">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return null
   }
 
   if (!user) {
@@ -116,7 +174,7 @@ function DashboardPageContent() {
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="relative z-10 p-6 bg-white/10 backdrop-blur-sm border-b border-white/20"
+        className="relative z-10 p-6 pt-24 bg-white/10 backdrop-blur-sm border-b border-white/20"
       >
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <div className="flex items-center gap-4">
@@ -165,37 +223,56 @@ function DashboardPageContent() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8"
+          className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Video className="w-8 h-8 text-red-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-white mb-1">{stats.videos}</h3>
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.videos}</h3>
             <p className="text-gray-300 text-sm">Videos</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <MessageSquare className="w-8 h-8 text-green-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-white mb-1">{stats.tweets}</h3>
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.tweets}</h3>
             <p className="text-gray-300 text-sm">Tweets</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Heart className="w-8 h-8 text-pink-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-white mb-1">{stats.likes}</h3>
-            <p className="text-gray-300 text-sm">Likes</p>
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.likes}</h3>
+            <p className="text-gray-300 text-sm">Likes Given</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <List className="w-8 h-8 text-orange-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-white mb-1">{stats.playlists}</h3>
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.playlists}</h3>
             <p className="text-gray-300 text-sm">Playlists</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center">
+        </motion.div>
+
+        {/* Additional Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        >
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <UserPlus className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-white mb-1">{stats.subscribers}</h3>
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.subscribers}</h3>
             <p className="text-gray-300 text-sm">Subscribers</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-4 border border-white/20 text-center">
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Eye className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-            <h3 className="text-xl font-bold text-white mb-1">{stats.subscriptions}</h3>
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.subscriptions}</h3>
             <p className="text-gray-300 text-sm">Following</p>
+          </div>
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+            <TrendingUp className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.totalViews}</h3>
+            <p className="text-gray-300 text-sm">Total Views</p>
+          </div>
+          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+            <Heart className="w-8 h-8 text-red-400 mx-auto mb-2" />
+            <h3 className="text-2xl font-bold text-white mb-1">{stats.totalLikes}</h3>
+            <p className="text-gray-300 text-sm">Total Likes</p>
           </div>
         </motion.div>
 
@@ -203,7 +280,7 @@ function DashboardPageContent() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl mb-8"
         >
           <div className="flex items-center justify-between mb-8">
@@ -384,7 +461,7 @@ function DashboardPageContent() {
           </Link>
         </motion.div>
       </div>
-    </div>
+    </div >
   )
 }
 

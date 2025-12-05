@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Activity, ArrowLeft, CheckCircle, AlertCircle, Clock, Server, Database, Zap } from "lucide-react"
 import Link from "next/link"
+import { api } from "@/lib/api"
 
 export default function HealthCheckPage() {
   const [healthData, setHealthData] = useState(null)
@@ -17,51 +18,15 @@ export default function HealthCheckPage() {
 
   const fetchHealthData = async () => {
     try {
-      const response = await fetch("/api/v1/healthcheck")
-      const contentType = response.headers.get("content-type")
-
-      if (!contentType || !contentType.includes("application/json")) {
-        // Mock data for demo
-        setHealthData({
-          status: "OK",
-          timestamp: new Date().toISOString(),
-          uptime: Math.floor(Math.random() * 86400), // Random uptime in seconds
-          services: {
-            database: {
-              status: "healthy",
-              responseTime: Math.floor(Math.random() * 50) + 10,
-              lastChecked: new Date().toISOString(),
-            },
-            server: {
-              status: "healthy",
-              responseTime: Math.floor(Math.random() * 30) + 5,
-              lastChecked: new Date().toISOString(),
-            },
-            api: {
-              status: "healthy",
-              responseTime: Math.floor(Math.random() * 20) + 5,
-              lastChecked: new Date().toISOString(),
-            },
-          },
-          metrics: {
-            totalUsers: Math.floor(Math.random() * 10000) + 1000,
-            totalVideos: Math.floor(Math.random() * 5000) + 500,
-            totalTweets: Math.floor(Math.random() * 20000) + 2000,
-            activeConnections: Math.floor(Math.random() * 100) + 10,
-          },
-        })
-        setLoading(false)
-        return
-      }
-
-      const data = await response.json()
-      setHealthData(data)
+      const response = await api.healthCheck()
+      setHealthData(response.data || response)
     } catch (error) {
       console.error("Error fetching health data:", error)
       setHealthData({
         status: "ERROR",
         timestamp: new Date().toISOString(),
         error: "Failed to fetch health data",
+        message: error.message,
       })
     } finally {
       setLoading(false)
@@ -69,6 +34,7 @@ export default function HealthCheckPage() {
   }
 
   const formatUptime = (seconds) => {
+    if (!seconds) return "N/A"
     const days = Math.floor(seconds / 86400)
     const hours = Math.floor((seconds % 86400) / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -197,25 +163,25 @@ export default function HealthCheckPage() {
               </p>
             </div>
             <div className="text-center">
-              <p className="text-gray-300 text-sm mb-2">Active Users</p>
-              <p className="text-white text-xl font-semibold">{healthData?.metrics?.activeConnections || 0}</p>
+              <p className="text-gray-300 text-sm mb-2">Response Time</p>
+              <p className="text-white text-xl font-semibold">{healthData?.responseTime || "N/A"}ms</p>
             </div>
             <div className="text-center">
-              <p className="text-gray-300 text-sm mb-2">Total Users</p>
-              <p className="text-white text-xl font-semibold">{healthData?.metrics?.totalUsers || 0}</p>
+              <p className="text-gray-300 text-sm mb-2">Version</p>
+              <p className="text-white text-xl font-semibold">{healthData?.version || "1.0.0"}</p>
             </div>
           </div>
         </motion.div>
 
         {/* Services Status */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid md:grid-cols-3 gap-6 mb-8"
-        >
-          {healthData?.services &&
-            Object.entries(healthData.services).map(([serviceName, serviceData], index) => (
+        {healthData?.services && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid md:grid-cols-3 gap-6 mb-8"
+          >
+            {Object.entries(healthData.services).map(([serviceName, serviceData], index) => (
               <motion.div
                 key={serviceName}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -253,50 +219,54 @@ export default function HealthCheckPage() {
                 </div>
               </motion.div>
             ))}
-        </motion.div>
-
-        {/* Metrics */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl"
-        >
-          <h2 className="text-2xl font-bold text-white mb-6">Platform Metrics</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="text-center p-4 bg-white/5 rounded-xl">
-              <p className="text-gray-300 text-sm mb-2">Total Videos</p>
-              <p className="text-white text-3xl font-bold">{healthData?.metrics?.totalVideos || 0}</p>
-            </div>
-            <div className="text-center p-4 bg-white/5 rounded-xl">
-              <p className="text-gray-300 text-sm mb-2">Total Tweets</p>
-              <p className="text-white text-3xl font-bold">{healthData?.metrics?.totalTweets || 0}</p>
-            </div>
-            <div className="text-center p-4 bg-white/5 rounded-xl">
-              <p className="text-gray-300 text-sm mb-2">Total Users</p>
-              <p className="text-white text-3xl font-bold">{healthData?.metrics?.totalUsers || 0}</p>
-            </div>
-            <div className="text-center p-4 bg-white/5 rounded-xl">
-              <p className="text-gray-300 text-sm mb-2">Active Now</p>
-              <p className="text-white text-3xl font-bold">{healthData?.metrics?.activeConnections || 0}</p>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Error Display */}
         {healthData?.error && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-8 bg-red-500/20 backdrop-blur-lg rounded-2xl p-6 border border-red-500/30"
+            className="bg-red-500/20 backdrop-blur-lg rounded-2xl p-6 border border-red-500/30"
           >
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-6 h-6 text-red-400" />
               <h3 className="text-red-300 font-semibold">System Error</h3>
             </div>
             <p className="text-red-200">{healthData.error}</p>
+            {healthData.message && <p className="text-red-200 mt-2">{healthData.message}</p>}
           </motion.div>
         )}
+
+        {/* API Information */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl"
+        >
+          <h2 className="text-2xl font-bold text-white mb-6">API Information</h2>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="text-white font-medium mb-2">Environment</h4>
+              <p className="text-gray-300">{healthData?.environment || "Production"}</p>
+            </div>
+            <div>
+              <h4 className="text-white font-medium mb-2">API Version</h4>
+              <p className="text-gray-300">{healthData?.apiVersion || "v1"}</p>
+            </div>
+            <div>
+              <h4 className="text-white font-medium mb-2">Database Status</h4>
+              <p className={getStatusColor(healthData?.database?.status || "unknown")}>
+                {healthData?.database?.status || "Unknown"}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-white font-medium mb-2">Memory Usage</h4>
+              <p className="text-gray-300">{healthData?.memory || "N/A"}</p>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   )

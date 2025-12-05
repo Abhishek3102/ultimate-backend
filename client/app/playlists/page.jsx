@@ -2,90 +2,52 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { List, Plus, ArrowLeft, Video, Play, Edit, Trash2, Lock, Globe } from "lucide-react"
+import { List, Plus, ArrowLeft, Video, Play, Edit, Trash2, Lock, Globe, X } from "lucide-react"
 import Link from "next/link"
+import { AuthProvider, useAuth } from "@/components/AuthProvider"
+import { api } from "@/lib/api"
 
-export default function PlaylistsPage() {
+function PlaylistsPageContent() {
   const [playlists, setPlaylists] = useState([])
+  const [videos, setVideos] = useState([])
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showAddVideoModal, setShowAddVideoModal] = useState(false)
+  const [selectedPlaylist, setSelectedPlaylist] = useState(null)
+  const [editingPlaylist, setEditingPlaylist] = useState(null)
   const [loading, setLoading] = useState(false)
   const [createData, setCreateData] = useState({
     name: "",
     description: "",
     isPublic: true,
   })
+  const { user, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    fetchPlaylists()
-  }, [])
+    if (isAuthenticated) {
+      fetchPlaylists()
+      fetchVideos()
+    }
+  }, [isAuthenticated])
 
   const fetchPlaylists = async () => {
     try {
-      const response = await fetch("/api/v1/playlist/user/current-user", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-      const contentType = response.headers.get("content-type")
-
-      if (!contentType || !contentType.includes("application/json")) {
-        // Mock data for demo
-        setPlaylists([
-          {
-            _id: "1",
-            name: "My Favorite Tech Videos",
-            description: "Collection of the best tech tutorials and reviews",
-            videos: [
-              {
-                _id: "v1",
-                title: "React Hooks Tutorial",
-                thumbnail: "/placeholder.svg?height=120&width=200",
-                duration: 1365,
-              },
-              {
-                _id: "v2",
-                title: "JavaScript ES6 Features",
-                thumbnail: "/placeholder.svg?height=120&width=200",
-                duration: 890,
-              },
-            ],
-            owner: {
-              _id: "user1",
-              username: "You",
-            },
-            isPublic: true,
-            createdAt: "2024-01-15T10:30:00Z",
-            updatedAt: "2024-01-15T10:30:00Z",
-          },
-          {
-            _id: "2",
-            name: "Cooking Masterclass",
-            description: "Learn to cook like a professional chef",
-            videos: [
-              {
-                _id: "v3",
-                title: "Italian Pasta Basics",
-                thumbnail: "/placeholder.svg?height=120&width=200",
-                duration: 1200,
-              },
-            ],
-            owner: {
-              _id: "user1",
-              username: "You",
-            },
-            isPublic: false,
-            createdAt: "2024-01-14T16:45:00Z",
-            updatedAt: "2024-01-14T16:45:00Z",
-          },
-        ])
-        return
-      }
-
-      const data = await response.json()
-      setPlaylists(data.data || [])
+      setLoading(true)
+      const response = await api.getPlaylists(user?._id)
+      setPlaylists(response.data || [])
     } catch (error) {
       console.error("Error fetching playlists:", error)
       setPlaylists([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchVideos = async () => {
+    try {
+      const response = await api.getVideos()
+      setVideos(response.data || [])
+    } catch (error) {
+      console.error("Error fetching videos:", error)
     }
   }
 
@@ -94,54 +56,28 @@ export default function PlaylistsPage() {
     setLoading(true)
 
     try {
-      const response = await fetch("/api/v1/playlist", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(createData),
-      })
-
-      const contentType = response.headers.get("content-type")
-
-      if (!contentType || !contentType.includes("application/json")) {
-        // Simulate playlist creation for demo
-        const newPlaylist = {
-          _id: Date.now().toString(),
-          name: createData.name,
-          description: createData.description,
-          videos: [],
-          owner: {
-            _id: "current-user",
-            username: "You",
-          },
-          isPublic: createData.isPublic,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        setPlaylists((prev) => [newPlaylist, ...prev])
-        setCreateData({ name: "", description: "", isPublic: true })
-        setShowCreateModal(false)
-        alert("Playlist created successfully!")
-        setLoading(false)
-        return
-      }
-
-      const data = await response.json()
-      if (response.ok) {
-        setPlaylists((prev) => [data.data, ...prev])
-        setCreateData({ name: "", description: "", isPublic: true })
-        setShowCreateModal(false)
-        alert("Playlist created successfully!")
-      } else {
-        alert(data.message || "Failed to create playlist")
-      }
+      const response = await api.createPlaylist(createData)
+      setPlaylists((prev) => [response.data, ...prev])
+      setCreateData({ name: "", description: "", isPublic: true })
+      setShowCreateModal(false)
+      alert("Playlist created successfully!")
     } catch (error) {
       console.error("Create playlist error:", error)
-      alert("Failed to create playlist")
+      alert(error.message || "Failed to create playlist")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updatePlaylist = async (playlistId, updateData) => {
+    try {
+      const response = await api.updatePlaylist(playlistId, updateData)
+      setPlaylists((prev) => prev.map((playlist) => (playlist._id === playlistId ? response.data : playlist)))
+      setEditingPlaylist(null)
+      alert("Playlist updated successfully!")
+    } catch (error) {
+      console.error("Update playlist error:", error)
+      alert(error.message || "Failed to update playlist")
     }
   }
 
@@ -149,19 +85,62 @@ export default function PlaylistsPage() {
     if (!confirm("Are you sure you want to delete this playlist?")) return
 
     try {
-      const response = await fetch(`/api/v1/playlist/${playlistId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      })
-
-      if (response.ok || !response.headers.get("content-type")?.includes("application/json")) {
-        setPlaylists((prev) => prev.filter((playlist) => playlist._id !== playlistId))
-        alert("Playlist deleted successfully!")
-      }
+      await api.deletePlaylist(playlistId)
+      setPlaylists((prev) => prev.filter((playlist) => playlist._id !== playlistId))
+      alert("Playlist deleted successfully!")
     } catch (error) {
       console.error("Delete playlist error:", error)
+      alert(error.message || "Failed to delete playlist")
+    }
+  }
+
+  const addVideoToPlaylist = async (playlistId, videoId) => {
+    try {
+      await api.addVideoToPlaylist(playlistId, videoId)
+
+      // Update local state
+      setPlaylists((prev) =>
+        prev.map((playlist) =>
+          playlist._id === playlistId
+            ? {
+              ...playlist,
+              videos: [...(playlist.videos || []), videos.find((v) => v._id === videoId)],
+            }
+            : playlist,
+        ),
+      )
+
+      setShowAddVideoModal(false)
+      setSelectedPlaylist(null)
+      alert("Video added to playlist!")
+    } catch (error) {
+      console.error("Add video error:", error)
+      alert(error.message || "Failed to add video to playlist")
+    }
+  }
+
+  const removeVideoFromPlaylist = async (playlistId, videoId) => {
+    if (!confirm("Remove this video from the playlist?")) return
+
+    try {
+      await api.removeVideoFromPlaylist(playlistId, videoId)
+
+      // Update local state
+      setPlaylists((prev) =>
+        prev.map((playlist) =>
+          playlist._id === playlistId
+            ? {
+              ...playlist,
+              videos: playlist.videos?.filter((v) => v._id !== videoId) || [],
+            }
+            : playlist,
+        ),
+      )
+
+      alert("Video removed from playlist!")
+    } catch (error) {
+      console.error("Remove video error:", error)
+      alert(error.message || "Failed to remove video from playlist")
     }
   }
 
@@ -170,6 +149,58 @@ export default function PlaylistsPage() {
     const remainingSeconds = seconds % 60
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
   }
+
+  // Mock data for non-authenticated users
+  const mockPlaylists = [
+    {
+      _id: "mock_1",
+      name: "My Favorite Tech Videos",
+      description: "Collection of the best tech tutorials and reviews",
+      videos: [
+        {
+          _id: "v1",
+          title: "React Hooks Tutorial",
+          thumbnail: "/placeholder.svg?height=120&width=200",
+          duration: 1365,
+        },
+        {
+          _id: "v2",
+          title: "JavaScript ES6 Features",
+          thumbnail: "/placeholder.svg?height=120&width=200",
+          duration: 890,
+        },
+      ],
+      owner: {
+        _id: "user1",
+        username: "You",
+      },
+      isPublic: true,
+      createdAt: "2024-01-15T10:30:00Z",
+      updatedAt: "2024-01-15T10:30:00Z",
+    },
+    {
+      _id: "mock_2",
+      name: "Cooking Masterclass",
+      description: "Learn to cook like a professional chef",
+      videos: [
+        {
+          _id: "v3",
+          title: "Italian Pasta Basics",
+          thumbnail: "/placeholder.svg?height=120&width=200",
+          duration: 1200,
+        },
+      ],
+      owner: {
+        _id: "user1",
+        username: "You",
+      },
+      isPublic: false,
+      createdAt: "2024-01-14T16:45:00Z",
+      updatedAt: "2024-01-14T16:45:00Z",
+    },
+  ]
+
+  const displayPlaylists = isAuthenticated ? playlists : mockPlaylists
 
   return (
     <div className="min-h-screen relative overflow-hidden">
@@ -194,7 +225,7 @@ export default function PlaylistsPage() {
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="relative z-10 p-6 bg-white/10 backdrop-blur-sm border-b border-white/20"
+        className="relative z-10 p-6 pt-24 bg-white/10 backdrop-blur-sm border-b border-white/20"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
@@ -213,23 +244,32 @@ export default function PlaylistsPage() {
             </div>
           </div>
 
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowCreateModal(true)}
-            className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full font-medium flex items-center gap-2 hover:shadow-lg transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            Create Playlist
-          </motion.button>
+          {isAuthenticated && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full font-medium flex items-center gap-2 hover:shadow-lg transition-all"
+            >
+              <Plus className="w-5 h-5" />
+              Create Playlist
+            </motion.button>
+          )}
         </div>
       </motion.div>
+
+      {/* Loading State */}
+      {loading && isAuthenticated && (
+        <div className="relative z-10 flex justify-center items-center py-20">
+          <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+        </div>
+      )}
 
       {/* Playlists Grid */}
       <div className="relative z-10 p-6 max-w-7xl mx-auto">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {playlists.map((playlist, index) => (
+            {displayPlaylists.map((playlist, index) => (
               <motion.div
                 key={playlist._id}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -255,6 +295,16 @@ export default function PlaylistsPage() {
                               <Play className="w-8 h-8 text-white" />
                             </div>
                           )}
+                          {isAuthenticated && user?._id === playlist.owner?._id && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => removeVideoFromPlaylist(playlist._id, video._id)}
+                              className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-full text-white hover:bg-red-500"
+                            >
+                              <X className="w-3 h-3" />
+                            </motion.button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -279,31 +329,49 @@ export default function PlaylistsPage() {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="text-white font-semibold text-lg line-clamp-2">{playlist.name}</h3>
-                    <div className="flex gap-2">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="p-2 bg-white/10 rounded-full text-gray-300 hover:text-white transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </motion.button>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => deletePlaylist(playlist._id)}
-                        className="p-2 bg-white/10 rounded-full text-gray-300 hover:text-red-400 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </motion.button>
-                    </div>
+                    {isAuthenticated && user?._id === playlist.owner?._id && (
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => setEditingPlaylist(playlist)}
+                          className="p-2 bg-white/10 rounded-full text-gray-300 hover:text-white transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => deletePlaylist(playlist._id)}
+                          className="p-2 bg-white/10 rounded-full text-gray-300 hover:text-red-400 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
+                      </div>
+                    )}
                   </div>
 
                   <p className="text-gray-300 text-sm mb-4 line-clamp-2">{playlist.description}</p>
 
-                  <div className="flex items-center justify-between text-gray-400 text-sm">
+                  <div className="flex items-center justify-between text-gray-400 text-sm mb-4">
                     <span>by {playlist.owner?.username}</span>
                     <span>{new Date(playlist.createdAt).toLocaleDateString()}</span>
                   </div>
+
+                  {isAuthenticated && user?._id === playlist.owner?._id && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setSelectedPlaylist(playlist)
+                        setShowAddVideoModal(true)
+                      }}
+                      className="w-full py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Videos
+                    </motion.button>
+                  )}
 
                   {playlist.videos && playlist.videos.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-white/10">
@@ -320,7 +388,7 @@ export default function PlaylistsPage() {
           </AnimatePresence>
         </div>
 
-        {playlists.length === 0 && (
+        {displayPlaylists.length === 0 && isAuthenticated && !loading && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20">
             <List className="w-20 h-20 text-gray-400 mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-white mb-2">No Playlists Yet</h3>
@@ -333,6 +401,25 @@ export default function PlaylistsPage() {
             >
               Create Playlist
             </motion.button>
+          </motion.div>
+        )}
+
+        {!isAuthenticated && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12 mt-8">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20">
+              <List className="w-16 h-16 text-orange-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-white mb-2">Organize Your Content</h3>
+              <p className="text-gray-300 mb-6">Login to create playlists and organize your favorite videos!</p>
+              <Link href="/auth">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-8 py-4 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-full font-medium hover:shadow-lg transition-all"
+                >
+                  Get Started
+                </motion.button>
+              </Link>
+            </div>
           </motion.div>
         )}
       </div>
@@ -412,6 +499,171 @@ export default function PlaylistsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Add Video to Playlist Modal */}
+      <AnimatePresence>
+        {showAddVideoModal && selectedPlaylist && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowAddVideoModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 w-full max-w-2xl max-h-[80vh] overflow-y-auto"
+            >
+              <h2 className="text-2xl font-bold text-white mb-6">Add Videos to "{selectedPlaylist.name}"</h2>
+
+              <div className="grid gap-4">
+                {videos
+                  .filter((video) => !selectedPlaylist.videos?.some((pv) => pv._id === video._id))
+                  .map((video) => (
+                    <motion.div
+                      key={video._id}
+                      whileHover={{ scale: 1.02 }}
+                      className="flex items-center gap-4 p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all"
+                    >
+                      <img
+                        src={video.thumbnail || "/placeholder.svg"}
+                        alt={video.title}
+                        className="w-20 h-12 object-cover rounded"
+                      />
+                      <div className="flex-1">
+                        <h4 className="text-white font-medium">{video.title}</h4>
+                        <p className="text-gray-400 text-sm">{video.owner?.username}</p>
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => addVideoToPlaylist(selectedPlaylist._id, video._id)}
+                        className="px-4 py-2 bg-orange-500/20 text-orange-300 rounded-lg font-medium hover:bg-orange-500/30 transition-all"
+                      >
+                        Add
+                      </motion.button>
+                    </motion.div>
+                  ))}
+              </div>
+
+              {videos.filter((video) => !selectedPlaylist.videos?.some((pv) => pv._id === video._id)).length === 0 && (
+                <div className="text-center py-8">
+                  <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-300">No more videos to add</p>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-6">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAddVideoModal(false)}
+                  className="px-6 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all"
+                >
+                  Done
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Playlist Modal */}
+      <AnimatePresence>
+        {editingPlaylist && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setEditingPlaylist(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 w-full max-w-md"
+            >
+              <h2 className="text-2xl font-bold text-white mb-6">Edit Playlist</h2>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  const formData = new FormData(e.target)
+                  updatePlaylist(editingPlaylist._id, {
+                    name: formData.get("name"),
+                    description: formData.get("description"),
+                    isPublic: formData.get("isPublic") === "on",
+                  })
+                }}
+                className="space-y-4"
+              >
+                <input
+                  name="name"
+                  type="text"
+                  placeholder="Playlist Name"
+                  defaultValue={editingPlaylist.name}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-all"
+                  required
+                />
+
+                <textarea
+                  name="description"
+                  placeholder="Description"
+                  defaultValue={editingPlaylist.description}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-orange-400 transition-all h-24 resize-none"
+                  required
+                />
+
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="editIsPublic"
+                    name="isPublic"
+                    defaultChecked={editingPlaylist.isPublic}
+                    className="w-4 h-4 text-orange-500 bg-white/10 border-white/20 rounded focus:ring-orange-500"
+                  />
+                  <label htmlFor="editIsPublic" className="text-white text-sm">
+                    Make playlist public
+                  </label>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setEditingPlaylist(null)}
+                    className="flex-1 py-3 bg-white/10 text-white rounded-xl font-medium hover:bg-white/20 transition-all"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    type="submit"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex-1 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+                  >
+                    Update
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  )
+}
+
+export default function PlaylistsPage() {
+  return (
+    <AuthProvider>
+      <PlaylistsPageContent />
+    </AuthProvider>
   )
 }

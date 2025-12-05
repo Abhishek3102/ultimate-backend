@@ -4,6 +4,8 @@ import {ApiError} from "../utils/ApiError.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import {asyncHandler} from "../utils/asyncHandler.js"
 
+const isValidObjectId = mongoose.isValidObjectId;
+
 const getVideoComments = asyncHandler(async (req, res) => {
     //TODO: get all comments for a video
     const {videoId} = req.params
@@ -15,13 +17,13 @@ const getVideoComments = asyncHandler(async (req, res) => {
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const comments = await Comment.find({comment_video : videoId})
-    .populate("user", "fullName avatar")
-    .sort({ craetedAt : -1})
+    const comments = await Comment.find({ video: videoId })
+    .populate("owner", "fullName avatar username")
+    .sort({ createdAt: -1})
     .skip(skip)
     .limit(parseInt(limit));
 
-    const totalComments = await Comment.countDocuments({ comment_video: videoId});
+    const totalComments = await Comment.countDocuments({ video: videoId});
 
     return res.status(200).json(
         new ApiResponse(200, {
@@ -33,8 +35,36 @@ const getVideoComments = asyncHandler(async (req, res) => {
     );
 });
 
+const getTweetComments = asyncHandler(async (req, res) => {
+    const {tweetId} = req.params
+    const {page = 1, limit = 10} = req.query;
+
+    if (!isValidObjectId(tweetId)) {
+        throw new ApiError(400, "Invalid Tweet ID");
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const comments = await Comment.find({ tweet: tweetId })
+    .populate("owner", "fullName avatar username")
+    .sort({ createdAt: -1})
+    .skip(skip)
+    .limit(parseInt(limit));
+
+    const totalComments = await Comment.countDocuments({ tweet: tweetId});
+
+    return res.status(200).json(
+        new ApiResponse(200, {
+            totalComments,
+            page : parseInt(page),
+            limit : parseInt(limit),
+            comments,
+        }, "Tweet comments fetched successfully")
+    );
+});
+
 const addComment = asyncHandler(async (req, res) => {
-    // TODO: add a comment to a video
+    // Add comment to video
     const {videoId} = req.params
 
     if(!isValidObjectId(videoId)){
@@ -44,28 +74,44 @@ const addComment = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { content } = req.body;
 
-    if(!isValidObjectId(userId)){
-        throw new ApiError(400, "Invalid User ID");
+    if(!content?.trim()){
+        throw new ApiError(400, "Comment content is required");
     }
 
-    if(!content || typeof content != "string" || content.trim() === ""){
-        throw new ApiError(400, "Comment content is required and must be a non-empty string");
+    const comment = await Comment.create({
+        content,
+        video: videoId,
+        owner: userId
+    });
+
+    return res.status(201).json(
+        new ApiResponse(201, comment, "Comment created successfully")
+    )
+})
+
+const addTweetComment = asyncHandler(async (req, res) => {
+    const {tweetId} = req.params
+
+    if(!isValidObjectId(tweetId)){
+        throw new ApiError(400, "Invalid Tweet ID");
     }
 
-    try {
-        await Comment.create({
-            comment_content : content,
-            user : userId, 
-            comment_video : videoId,
-        });
-    
-        return res.status(201).json(
-            new ApiResponse(201, null, "Comment created successfully")
-        )
-    
-    } catch (error) {
-        throw new ApiError(500, "Error while creating comment");
+    const userId = req.user._id;
+    const { content } = req.body;
+
+    if(!content?.trim()){
+        throw new ApiError(400, "Comment content is required");
     }
+
+    const comment = await Comment.create({
+        content,
+        tweet: tweetId,
+        owner: userId
+    });
+
+    return res.status(201).json(
+        new ApiResponse(201, comment, "Comment added to tweet successfully")
+    )
 })
 
 const updateComment = asyncHandler(async (req, res) => {
@@ -124,10 +170,10 @@ const deleteComment = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Invalid Comment ID");
     }
     if(!isValidObjectId(userId)){
-        throw new ApiError(400, "Invalid Comment ID");
+        throw new ApiError(400, "Invalid User ID");
     }
     if(!isValidObjectId(videoId)){
-        throw new ApiError(400, "Invalid Comment ID");
+        throw new ApiError(400, "Invalid Video ID");
     }
 
     try {
@@ -154,7 +200,9 @@ const deleteComment = asyncHandler(async (req, res) => {
 
 export {
     getVideoComments, 
+    getTweetComments,
     addComment, 
+    addTweetComment,
     updateComment,
-     deleteComment
+    deleteComment
     }
