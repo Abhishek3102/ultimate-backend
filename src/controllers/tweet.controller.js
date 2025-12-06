@@ -127,13 +127,53 @@ const createTweet = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Get all tweets from the logged-in user
-// ✅ Get all tweets from the logged-in user
-const getUserTweets = asyncHandler(async (req, res) => {
+// ✅ Get tweets for a specific channel/user (with privacy check)
+const getChannelTweets = asyncHandler(async (req, res) => {
+  const { userId } = req.params; // Expect userId in params
+
+  if (!isValidObjectId(userId)) {
+      throw new ApiError(400, "Invalid User ID");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+      throw new ApiError(404, "User not found");
+  }
+
+  // Privacy Check
+  if (user.isPrivate) {
+      if (!req.user || req.user._id.toString() !== userId.toString()) {
+           const isSubscribed = await mongoose.model("Subscription").findOne({
+               subscriber: req.user?._id,
+               channel: userId,
+               status: "accepted"
+           });
+           if (!isSubscribed) {
+               return res.status(200).json(new ApiResponse(200, [], "User is private"));
+           }
+      }
+  }
+
   const tweets = await Tweet.aggregate([
     {
       $match: {
-        owner: req.user._id,
+        owner: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "owner",
+        foreignField: "_id",
+        as: "ownerDetails",
+        pipeline: [
+          {
+            $project: {
+              username: 1,
+              "avatar": 1,
+            },
+          },
+        ],
       },
     },
     {
@@ -160,12 +200,23 @@ const getUserTweets = asyncHandler(async (req, res) => {
         commentsCount: {
           $size: "$comments",
         },
+        isLiked: {
+             $cond: {
+                 if: { $in: [req.user?._id, "$likes.likedBy"] },
+                 then: true,
+                 else: false
+             }
+        },
+        owner: {
+          $first: "$ownerDetails",
+        },
       },
     },
     {
         $project: {
             likes: 0,
-            comments: 0
+            comments: 0,
+            ownerDetails: 0
         }
     },
     {
@@ -176,8 +227,15 @@ const getUserTweets = asyncHandler(async (req, res) => {
   ]);
 
   return res.status(200).json(
-    new ApiResponse(200, tweets, "User tweets fetched successfully")
+    new ApiResponse(200, tweets, "Tweets fetched successfully")
   );
+});
+
+// ✅ Get all tweets from the logged-in user (Helper for convenience, or deprecated)
+const getUserTweets = asyncHandler(async (req, res) => {
+    // Redirect to getChannelTweets with logged in user id
+    req.params.userId = req.user._id;
+    return getChannelTweets(req, res);
 });
 
 // ✅ Update a tweet by ID
@@ -243,6 +301,7 @@ export {
   createTweet,
   getAllTweets,
   getUserTweets,
+  getChannelTweets,
   updateTweet,
   deleteTweet
 };

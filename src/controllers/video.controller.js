@@ -1,56 +1,9 @@
-/*
-import mongoose, {isValidObjectId} from "mongoose"
-import {Video} from "../models/video.model.js"
-import {User} from "../models/user.model.js"
-import {ApiError} from "../utils/ApiError.js"
-import {ApiResponse} from "../utils/ApiResponse.js"
-import {asyncHandler} from "../utils/asyncHandler.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
-
-
-const getAllVideos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
-})
-
-const publishAVideo = asyncHandler(async (req, res) => {
-    const { title, description} = req.body
-    // TODO: get video, upload to cloudinary, create video
-})
-
-const getVideoById = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: get video by id
-})
-
-const updateVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: update video details like title, description, thumbnail
-
-})
-
-const deleteVideo = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-    //TODO: delete video
-})
-
-const togglePublishStatus = asyncHandler(async (req, res) => {
-    const { videoId } = req.params
-})
-
-export {
-    getAllVideos,
-    publishAVideo,
-    getVideoById,
-    updateVideo,
-    deleteVideo,
-    togglePublishStatus
-}*/
 
 
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../models/video.model.js";
 import { User } from "../models/user.model.js";
+import { Subscription } from "../models/subscription.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -58,16 +11,51 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 // ✅ GET all videos with search, sort, pagination, and optional filtering by userId
 // ✅ GET all videos with search, sort, pagination, and optional filtering by userId
+// ✅ GET all videos with search, sort, pagination, and optional filtering by userId
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query = "", sortBy = "createdAt", sortType = "desc", userId } = req.query;
+  
+  console.log("getAllVideos called:");
+  console.log(" - Query:", req.query);
+  console.log(" - User (req.user):", req.user ? req.user._id : "GUEST");
 
   const matchStage = {
-    isPublished: true,
     title: { $regex: query, $options: "i" }, // case-insensitive search
   };
 
+  // Default to published only
+  let isOwner = false;
+
+  // Check privacy/ownership if filtering by userId
   if (userId && isValidObjectId(userId)) {
-    matchStage.owner = new mongoose.Types.ObjectId(userId);
+      const user = await User.findById(userId);
+      if (user) {
+          // Check if requester is owner
+          if (req.user && req.user._id.toString() === userId.toString()) {
+              isOwner = true;
+          }
+
+          if (user.isPrivate && !isOwner) {
+              // If private and not owner, check subscription
+              if (!req.user) {
+                  return res.status(200).json(new ApiResponse(200, { total: 0, page: parseInt(page), limit: parseInt(limit), videos: [] }, "User is private"));
+              }
+
+               const isSubscribed = await Subscription.findOne({
+                   subscriber: new mongoose.Types.ObjectId(req.user._id),
+                   channel: new mongoose.Types.ObjectId(userId),
+                   status: "accepted"
+               });
+               if (!isSubscribed) {
+                   return res.status(200).json(new ApiResponse(200, { total: 0, page: parseInt(page), limit: parseInt(limit), videos: [] }, "User is private"));
+               }
+          }matchStage.owner = new mongoose.Types.ObjectId(userId);
+      }
+  }
+
+  // If not owner, only show published videos
+  if (!isOwner) {
+      matchStage.isPublished = true;
   }
 
   const sortOptions = {
@@ -121,6 +109,13 @@ const getAllVideos = asyncHandler(async (req, res) => {
         owner: {
           $first: "$ownerDetails",
         },
+        isLiked: {
+          $cond: {
+            if: { $in: [req.user?._id, "$likes.likedBy"] },
+            then: true,
+            else: false
+          }
+        }
       },
     },
     {
@@ -148,7 +143,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
       total,
       page: parseInt(page),
       limit: parseInt(limit),
-      videos, // Ensure consistency with frontend expectation (paginated response)
+      videos, 
     }, "Videos fetched successfully")
   );
 });
@@ -176,6 +171,7 @@ const publishAVideo = asyncHandler(async (req, res) => {
     thumbnail: thumbnail.url,
     videoFile: video.url,
     duration: video.duration, // Cloudinary provides duration
+    isPublished: true,
     owner: req.user._id,
   });
 

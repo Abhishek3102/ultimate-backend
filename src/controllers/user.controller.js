@@ -354,6 +354,82 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
 })
 
 
+// ✅ Toggle Account Privacy
+const toggleAccountPrivacy = asyncHandler(async(req, res) => {
+    const user = await User.findById(req.user?._id)
+    user.isPrivate = !user.isPrivate
+    await user.save({validateBeforeSave: false})
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, {isPrivate: user.isPrivate}, "Privacy settings updated"))
+})
+
+// ✅ Search Users
+const searchUsers = asyncHandler(async(req, res) => {
+    const { query } = req.query
+    
+    if (!query?.trim()) {
+        throw new ApiError(400, "Search query is required")
+    }
+
+    const users = await User.find({
+        $or: [
+            { username: { $regex: query, $options: "i" } },
+            { fullName: { $regex: query, $options: "i" } }
+        ]
+    }).select("fullName username avatar isPrivate")
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users fetched successfully"))
+})
+
+// ✅ Get All Users (for suggestions)
+const getAllUsers = asyncHandler(async(req, res) => {
+    const users = await User.aggregate([
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                pipeline: [{ $match: { status: "accepted" } }],
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "_id",
+                foreignField: "owner",
+                as: "videos"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: { $size: "$subscribers" },
+                videosCount: { $size: "$videos" }
+            }
+        },
+        {
+            $project: {
+                fullName: 1,
+                username: 1,
+                avatar: 1,
+                subscribersCount: 1,
+                videosCount: 1,
+                createdAt: 1,
+                isPrivate: 1
+            }
+        },
+        { $sort: { createdAt: -1 } }
+    ]);
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, users, "All users fetched successfully"))
+})
+
 const getUserChannelProfile = asyncHandler(async(req, res) => {
     const {username} = req.params
 
@@ -372,6 +448,9 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 from: "subscriptions",
                 localField: "_id",
                 foreignField: "channel",
+                pipeline: [
+                     { $match: { status: "accepted" } }
+                ],
                 as: "subscribers"
             }
         },
@@ -380,7 +459,25 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 from: "subscriptions",
                 localField: "_id",
                 foreignField: "subscriber",
+                pipeline: [
+                    { $match: { status: "accepted" } }
+               ],
                 as: "subscribedTo"
+            }
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                pipeline: [
+                    {
+                        $match: {
+                            subscriber: new mongoose.Types.ObjectId(req.user?._id)
+                        }
+                    }
+                ],
+                as: "mySubscription" // Check if current user has any relationship
             }
         },
         {
@@ -393,10 +490,18 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 },
                 isSubscribed: {
                     $cond: {
-                        if: {$in: [req.user?._id, "$subscribers.subscriber"]},
+                        if: { 
+                            $eq: [
+                                { $arrayElemAt: ["$mySubscription.status", 0] },
+                                "accepted" 
+                            ] 
+                        },
                         then: true,
                         else: false
                     }
+                },
+                subscriptionStatus: {
+                     $arrayElemAt: ["$mySubscription.status", 0] 
                 }
             }
         },
@@ -407,9 +512,11 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 subscribersCount: 1,
                 channelsSubscribedToCount: 1,
                 isSubscribed: 1,
+                subscriptionStatus: 1,
                 avatar: 1,
                 coverImage: 1,
-                email: 1
+                email: 1,
+                isPrivate: 1
 
             }
         }
@@ -480,6 +587,23 @@ const getWatchHistory = asyncHandler(async(req, res) => {
     )
 })
 
+const getUserById = asyncHandler(async(req, res) => {
+    const { userId } = req.params
+
+    if (!userId) {
+        throw new ApiError(400, "User ID is missing")
+    }
+
+    const user = await User.findById(userId).select("-password -refreshToken")
+
+    if (!user) {
+        throw new ApiError(404, "User not found")
+    }
+
+    return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User fetched successfully"))
+})
 
 export {
     registerUser,
@@ -492,5 +616,9 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
+    toggleAccountPrivacy,
+    searchUsers,
+    getAllUsers,
+    getUserById
 }

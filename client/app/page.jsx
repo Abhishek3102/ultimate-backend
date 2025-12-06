@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
-import { ArrowRight, Users, Video, MessageSquare, Heart, List, UserPlus, Settings, Activity } from "lucide-react"
+import { ArrowRight, Users, Video, MessageSquare, Heart, List, UserPlus, Settings, Activity, HelpCircle, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { AuthProvider, useAuth } from "@/components/AuthProvider"
 import LogoutButton from "@/components/LogoutButton"
@@ -118,17 +118,31 @@ export default function HomePage() {
           transition={{ duration: 0.8 }}
           className="text-6xl md:text-8xl font-bold text-white mb-6 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent"
         >
-          ChaiTube
+          Socioverse
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl"
+          className="text-xl md:text-2xl text-gray-300 mb-6 max-w-3xl"
         >
-          Your complete social media platform with videos, tweets, playlists, subscriptions and more
+          Where every social world comes together.
         </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="max-w-4xl text-gray-400 text-lg mb-10 leading-relaxed font-light"
+        >
+          <p className="mb-4">
+            Welcome to Socioverse - the world where your videos, posts, playlists, messages, and interactions come together in perfect harmony.
+          </p>
+          <p>
+            Experience a unified platform built for creators, fans, friends, and communities. Whether you're sharing a moment, uploading a masterpiece, or discovering something new, Socioverse gives you the tools to express yourself effortlessly in a connected world.
+          </p>
+        </motion.div>
 
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
@@ -157,11 +171,11 @@ export default function HomePage() {
       </div>
 
       {/* Features Grid */}
-      <div className="relative z-10 px-6 py-20 pb-32">
+      <div className="relative z-10 px-6 py-12">
         <motion.h2
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
-          className="text-4xl font-bold text-center text-white mb-16"
+          className="text-4xl font-bold text-center text-white mb-10"
         >
           Platform Features
         </motion.h2>
@@ -195,6 +209,108 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      {/* Community Highlight Section */}
+      <div className="relative z-10 px-6 py-12 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="max-w-4xl mx-auto bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-md rounded-3xl p-8 border border-white/10"
+        >
+          <h3 className="text-2xl font-bold text-white mb-4">A Universe of Possibilities</h3>
+          <p className="text-lg text-gray-300 leading-relaxed italic">
+            "Socioverse is more than a platform — it’s a space to express yourself, discover new voices, and bring your communities together.
+            Whether you're here to create, connect, or explore, you’re part of a universe built for endless possibilities."
+          </p>
+        </motion.div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="relative z-10 px-6 pb-20 pt-4">
+        <motion.h2
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          className="text-4xl font-bold text-center text-white mb-10 flex items-center justify-center gap-3"
+        >
+          <HelpCircle className="w-10 h-10 text-cyan-400" />
+          Frequently Asked Questions
+        </motion.h2>
+
+        <div className="max-w-4xl mx-auto space-y-4">
+          {faqs.map((faq, index) => (
+            <FAQItem key={index} faq={faq} index={index} />
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const faqs = [
+  {
+    question: "What is Socioverse?",
+    answer: "Socioverse is a comprehensive social video platform designed to bring creators and viewers together. It empowers you to upload, share, and discover high-quality video content while connecting with a vibrant community through tweets, likes, and comments."
+  },
+  {
+    question: "How do I start uploading videos?",
+    answer: "Uploading is simple! Once you create an account and log in, navigate to the 'Videos' section and click on the 'Upload Video' button. You can provide a title, description, and custom thumbnail to make your content stand out."
+  },
+  {
+    question: "Can I organize videos into playlists?",
+    answer: "Absolutely. You can create unlimited playlists to curate your favorite content. You have full control over your playlists, with options to keep them public for everyone to see or private for your personal collection."
+  },
+  {
+    question: "How do I interact with other users?",
+    answer: "Engagement is at the core of Socioverse. You can subscribe to channels, like and comment on videos, and even use our Tweet system to share short updates or thoughts with your followers."
+  },
+  {
+    question: "What can I do in the Dashboard?",
+    answer: "The Dashboard is your personal command center. It provides analytics on your channel's performance, including subscriber counts and video metrics. You can also manage your profile settings and view your content stats here."
+  }
+]
+
+function FAQItem({ faq, index }) {
+  const [isOpen, setIsOpen] = useState(false)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.5, delay: index * 0.1 }}
+      className="group"
+    >
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        className={`bg-white/5 backdrop-blur-md rounded-2xl border transition-all cursor-pointer overflow-hidden ${isOpen ? "border-cyan-500/50 bg-white/10" : "border-white/10 hover:border-white/30"
+          }`}
+      >
+        <div className="p-6 flex items-center justify-between gap-4">
+          <h3 className={`text-lg font-semibold transition-colors ${isOpen ? "text-cyan-400" : "text-white group-hover:text-cyan-200"}`}>
+            {faq.question}
+          </h3>
+          <div className={`p-2 rounded-full bg-white/5 transition-transform duration-300 ${isOpen ? "rotate-180 bg-cyan-500/20" : ""}`}>
+            <ChevronDown className={`w-5 h-5 ${isOpen ? "text-cyan-400" : "text-gray-400"}`} />
+          </div>
+        </div>
+
+        <Collapse isOpen={isOpen}>
+          <div className="px-6 pb-6 text-gray-300 leading-relaxed border-t border-white/5 pt-4">
+            {faq.answer}
+          </div>
+        </Collapse>
+      </div>
+    </motion.div>
+  )
+}
+
+function Collapse({ isOpen, children }) {
+  return (
+    <div
+      className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+    >
+      <div className="overflow-hidden">{children}</div>
     </div>
   )
 }

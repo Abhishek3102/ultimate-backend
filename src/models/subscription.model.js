@@ -8,6 +8,11 @@ const subscriptionSchema = new Schema({
     channel: {
         type: Schema.Types.ObjectId, // one to whom 'subscriber' is subscribing
         ref: "User"
+    },
+    status: {
+        type: String,
+        enum: ["pending", "accepted", "rejected"],
+        default: "accepted"
     }
 }, {timestamps: true})
 
