@@ -12,13 +12,16 @@ function PlaylistsPageContent() {
   const [videos, setVideos] = useState([])
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAddVideoModal, setShowAddVideoModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
   const [selectedPlaylist, setSelectedPlaylist] = useState(null)
+  const [viewingPlaylist, setViewingPlaylist] = useState(null)
   const [editingPlaylist, setEditingPlaylist] = useState(null)
   const [loading, setLoading] = useState(false)
   const [createData, setCreateData] = useState({
     name: "",
     description: "",
     isPublic: true,
+    videos: [], // Array of video IDs
   })
   const { user, isAuthenticated } = useAuth()
 
@@ -45,7 +48,18 @@ function PlaylistsPageContent() {
   const fetchVideos = async () => {
     try {
       const response = await api.getVideos()
-      setVideos(response.data || [])
+      let videoList = []
+
+      // Handle paginated response from backend { data: { videos: [...] } }
+      if (response.data?.videos && Array.isArray(response.data.videos)) {
+        videoList = response.data.videos
+      }
+      // Handle legacy/mock response { data: [...] }
+      else if (Array.isArray(response.data)) {
+        videoList = response.data
+      }
+
+      setVideos(videoList)
     } catch (error) {
       console.error("Error fetching videos:", error)
     }
@@ -57,10 +71,21 @@ function PlaylistsPageContent() {
 
     try {
       const response = await api.createPlaylist(createData)
+      // The backend should return the created playlist. 
+      // If we sent videos, the backend currently returns just the IDs in the 'videos' array (based on standard mongoose create).
+      // But our frontend expects full objects for display.
+      // So we might need to manually hydrate them or re-fetch.
+      // For a quick UX wins, let's construct the object optimistically or just re-fetch.
+
+      // Let's re-fetch to be safe and simple, or just add what we have.
+      // Optimistic approach if backend returns the object:
       setPlaylists((prev) => [response.data, ...prev])
-      setCreateData({ name: "", description: "", isPublic: true })
+
+      setCreateData({ name: "", description: "", isPublic: true, videos: [] })
       setShowCreateModal(false)
       alert("Playlist created successfully!")
+      // Fetch playlists again to ensure we have populated video objects
+      fetchPlaylists()
     } catch (error) {
       console.error("Create playlist error:", error)
       alert(error.message || "Failed to create playlist")
@@ -110,6 +135,19 @@ function PlaylistsPageContent() {
         ),
       )
 
+      // Update viewing playlist if it's the one being modified
+      if (viewingPlaylist && viewingPlaylist._id === playlistId) {
+        // We need the full video object to add it to viewingPlaylist
+        // Since we just have Video ID, we find it in the global videos list which has owner info
+        const videoToAdd = videos.find((v) => v._id === videoId);
+        if (videoToAdd) {
+          setViewingPlaylist(prev => ({
+            ...prev,
+            videos: [...(prev.videos || []), videoToAdd]
+          }))
+        }
+      }
+
       setShowAddVideoModal(false)
       setSelectedPlaylist(null)
       alert("Video added to playlist!")
@@ -136,6 +174,22 @@ function PlaylistsPageContent() {
             : playlist,
         ),
       )
+
+      // Update viewing playlist if it's the one being modified
+      if (viewingPlaylist && viewingPlaylist._id === playlistId) {
+        setViewingPlaylist(prev => ({
+          ...prev,
+          videos: prev.videos?.filter((v) => v._id !== videoId) || []
+        }))
+      }
+
+      // Update editing playlist if it's the one being modified
+      if (editingPlaylist && editingPlaylist._id === playlistId) {
+        setEditingPlaylist(prev => ({
+          ...prev,
+          videos: prev.videos?.filter((v) => v._id !== videoId) || []
+        }))
+      }
 
       alert("Video removed from playlist!")
     } catch (error) {
@@ -225,7 +279,7 @@ function PlaylistsPageContent() {
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="relative z-10 p-6 pt-24 bg-white/10 backdrop-blur-sm border-b border-white/20"
+        className="relative z-10 p-6 pt-32 bg-white/10 backdrop-blur-sm border-b border-white/20"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           <div className="flex items-center gap-4">
@@ -280,7 +334,13 @@ function PlaylistsPageContent() {
                 className="bg-white/10 backdrop-blur-lg rounded-2xl overflow-hidden border border-white/20 hover:border-white/40 transition-all"
               >
                 {/* Playlist Thumbnail Grid */}
-                <div className="relative h-48 bg-gradient-to-br from-orange-500/20 to-amber-500/20">
+                <div
+                  className="relative h-48 bg-gradient-to-br from-orange-500/20 to-amber-500/20 cursor-pointer group"
+                  onClick={() => {
+                    setViewingPlaylist(playlist)
+                    setShowViewModal(true)
+                  }}
+                >
                   {playlist.videos && playlist.videos.length > 0 ? (
                     <div className="grid grid-cols-2 h-full">
                       {playlist.videos.slice(0, 4).map((video, videoIndex) => (
@@ -291,16 +351,19 @@ function PlaylistsPageContent() {
                             className="w-full h-full object-cover"
                           />
                           {videoIndex === 0 && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                               <Play className="w-8 h-8 text-white" />
                             </div>
                           )}
-                          {isAuthenticated && user?._id === playlist.owner?._id && (
+                          {isAuthenticated && (playlist.owner?._id === user?._id || playlist.owner === user?._id) && (
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={() => removeVideoFromPlaylist(playlist._id, video._id)}
-                              className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-full text-white hover:bg-red-500"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeVideoFromPlaylist(playlist._id, video._id)
+                              }}
+                              className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-full text-white hover:bg-red-500 z-10"
                             >
                               <X className="w-3 h-3" />
                             </motion.button>
@@ -329,7 +392,7 @@ function PlaylistsPageContent() {
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="text-white font-semibold text-lg line-clamp-2">{playlist.name}</h3>
-                    {isAuthenticated && user?._id === playlist.owner?._id && (
+                    {isAuthenticated && (playlist.owner?._id === user?._id || playlist.owner === user?._id) && (
                       <div className="flex gap-2">
                         <motion.button
                           whileHover={{ scale: 1.1 }}
@@ -358,7 +421,7 @@ function PlaylistsPageContent() {
                     <span>{new Date(playlist.createdAt).toLocaleDateString()}</span>
                   </div>
 
-                  {isAuthenticated && user?._id === playlist.owner?._id && (
+                  {isAuthenticated && (playlist.owner?._id === user?._id || playlist.owner === user?._id) && (
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -472,6 +535,50 @@ function PlaylistsPageContent() {
                   <label htmlFor="isPublic" className="text-white text-sm">
                     Make playlist public
                   </label>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-white font-medium">Add Videos</label>
+                  <div className="bg-white/5 rounded-xl border border-white/20 max-h-48 overflow-y-auto custom-scrollbar p-2">
+                    {videos.length > 0 ? (
+                      <div className="space-y-2">
+                        {videos.map((video) => (
+                          <div
+                            key={video._id}
+                            onClick={() => {
+                              const isSelected = createData.videos.includes(video._id);
+                              setCreateData(prev => ({
+                                ...prev,
+                                videos: isSelected
+                                  ? prev.videos.filter(id => id !== video._id)
+                                  : [...prev.videos, video._id]
+                              }));
+                            }}
+                            className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all border ${createData.videos.includes(video._id)
+                              ? 'bg-orange-500/20 border-orange-500'
+                              : 'hover:bg-white/10 border-transparent'
+                              }`}
+                          >
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${createData.videos.includes(video._id)
+                              ? 'bg-orange-500 border-orange-500'
+                              : 'border-gray-400'
+                              }`}>
+                              {createData.videos.includes(video._id) && <Video className="w-3 h-3 text-white" />}
+                            </div>
+                            <img src={video.thumbnail || "/placeholder.svg"} alt="" className="w-12 h-8 object-cover rounded" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{video.title}</p>
+                              <p className="text-gray-400 text-xs">by {video.owner?.username}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-400 text-sm">
+                        No videos available to add
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-4 pt-4">
@@ -632,6 +739,40 @@ function PlaylistsPageContent() {
                   </label>
                 </div>
 
+                <div className="space-y-2">
+                  <label className="text-white font-medium">Manage Videos</label>
+                  <div className="bg-white/5 rounded-xl border border-white/20 max-h-48 overflow-y-auto custom-scrollbar p-2">
+                    {editingPlaylist.videos && editingPlaylist.videos.length > 0 ? (
+                      <div className="space-y-2">
+                        {editingPlaylist.videos.map((video) => (
+                          <div
+                            key={video._id}
+                            className="flex items-center gap-3 p-2 rounded-lg bg-white/5 border border-white/10"
+                          >
+                            <img src={video.thumbnail || "/placeholder.svg"} alt="" className="w-12 h-8 object-cover rounded" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{video.title}</p>
+                            </div>
+                            <motion.button
+                              type="button"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => removeVideoFromPlaylist(editingPlaylist._id, video._id)}
+                              className="p-1.5 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-all"
+                            >
+                              <X className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-400 text-sm">
+                        No videos in this playlist
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-4 pt-4">
                   <motion.button
                     type="button"
@@ -652,6 +793,126 @@ function PlaylistsPageContent() {
                   </motion.button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* View Playlist Modal */}
+      <AnimatePresence>
+        {showViewModal && viewingPlaylist && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowViewModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex justify-between items-start mb-6 shrink-0">
+                <div>
+                  <h2 className="text-3xl font-bold text-white mb-2">{viewingPlaylist.name}</h2>
+                  <p className="text-gray-300">{viewingPlaylist.description}</p>
+                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-400">
+                    <span>By {viewingPlaylist.owner?.username}</span>
+                    <span>•</span>
+                    <span>{viewingPlaylist.videos?.length || 0} videos</span>
+                  </div>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowViewModal(false)}
+                  className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20"
+                >
+                  <X className="w-6 h-6" />
+                </motion.button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                {viewingPlaylist.videos && viewingPlaylist.videos.length > 0 ? (
+                  <div className="space-y-4">
+                    {viewingPlaylist.videos.map((video, index) => (
+                      <motion.div
+                        key={`${video._id}-${index}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all group"
+                      >
+                        <div className="relative w-40 aspect-video shrink-0 bg-black/50 rounded-lg overflow-hidden">
+                          <img
+                            src={video.thumbnail || "/placeholder.svg"}
+                            alt={video.title}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                            {formatDuration(video.duration)}
+                          </div>
+                        </div>
+
+                        <div className="flex-1 min-w-0 py-1">
+                          <h3 className="text-white font-semibold text-lg mb-1 truncate">{video.title}</h3>
+
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full">
+                              <img
+                                src={video.owner?.avatar || "/placeholder.svg"}
+                                className="w-4 h-4 rounded-full"
+                                onError={(e) => e.target.style.display = 'none'}
+                              />
+                              <span className="text-gray-300 text-xs font-medium">
+                                {video.owner?.username || "Unknown User"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {isAuthenticated && user?._id === viewingPlaylist.owner?._id && (
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => removeVideoFromPlaylist(viewingPlaylist._id, video._id)}
+                            className="self-center p-2 bg-red-500/10 text-red-400 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500/20"
+                            title="Remove from playlist"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </motion.button>
+                        )}
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 flex flex-col items-center">
+                    <Video className="w-20 h-20 text-gray-600 mb-4" />
+                    <h3 className="text-xl font-bold text-gray-400">Empty Playlist</h3>
+                    <p className="text-gray-500">No videos in this playlist yet.</p>
+                  </div>
+                )}
+              </div>
+
+              {isAuthenticated && user?._id === viewingPlaylist.owner?._id && (
+                <div className="mt-6 pt-6 border-t border-white/10 flex justify-end">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedPlaylist(viewingPlaylist)
+                      setShowAddVideoModal(true)
+                    }}
+                    className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium shadow-lg hover:shadow-orange-500/20 transition-all flex items-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add More Videos
+                  </motion.button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

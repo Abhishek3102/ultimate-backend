@@ -21,13 +21,24 @@ function VideosPageContent() {
   const { user, isAuthenticated } = useAuth()
 
   useEffect(() => {
-    fetchVideos()
-  }, [])
+    if (user?._id) {
+      fetchVideos()
+    } else if (!isAuthenticated) {
+      // if not authenticated, maybe fetch all or empty? 
+      // User requirement: "in videos section, only the user who is logged in should get their video"
+      // If not logged in, they presumably see nothing or a "login" prompt.
+      // Existing code fetched all. Let's stick to "authenticated user sees their videos".
+      fetchVideos()
+    }
+  }, [user, isAuthenticated])
 
   const fetchVideos = async () => {
     try {
       setFetching(true)
-      const response = await api.getVideos()
+      // Pass user ID to filter videos. If user is null, it passes undefined, returning all.
+      // But user wants "only the user who is logged in should get their video".
+      // So if logged in, pass ID.
+      const response = await api.getVideos(user?._id)
 
       let videoList = []
       // Handle paginated response from backend { data: { videos: [...] } }
@@ -239,7 +250,7 @@ function VideosPageContent() {
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="relative z-10 p-6 pt-28 bg-white/5 backdrop-blur-sm border-b border-white/20"
+        className="relative z-10 p-6 pt-32"
       >
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           {/* ... Header Content ... */}
@@ -354,10 +365,10 @@ function VideosPageContent() {
                             e.stopPropagation()
                             toggleVideoLike(video._id)
                           }}
-                          className={`flex items-center gap-1 transition-colors hover:text-red-400 cursor-pointer ${video.isLiked ? "text-red-400" : "text-gray-400"
+                          className={`flex items-center gap-1 transition-colors hover:text-red-400 cursor-pointer ${video.likesCount > 0 ? "text-red-400" : "text-gray-400"
                             }`}
                         >
-                          <Heart className={`w-4 h-4 ${video.isLiked ? "fill-current" : ""}`} />
+                          <Heart className={`w-4 h-4 ${video.likesCount > 0 ? "fill-current" : ""}`} />
                           <span className="text-sm">{video.likesCount || 0}</span>
                         </button>
                         <button
@@ -416,7 +427,7 @@ function VideosPageContent() {
               {/* ... Login Prompt ... */}
               <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20">
                 <Video className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-white mb-2">Join ChaiTube</h3>
+                <h3 className="text-2xl font-bold text-white mb-2">Join Socioverse</h3>
                 <p className="text-gray-300 mb-6">Login to upload videos and start your journey!</p>
                 <Link href="/auth">
                   <motion.button
@@ -474,8 +485,8 @@ function VideosPageContent() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <button onClick={() => toggleLike(selectedVideo._id)} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">
-                          <Heart className="w-5 h-5" />
+                        <button onClick={() => toggleLike(selectedVideo._id)} className={`flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all ${selectedVideo.likesCount > 0 ? "text-red-400" : "text-white"}`}>
+                          <Heart className={`w-5 h-5 ${selectedVideo.likesCount > 0 ? "fill-current" : ""}`} />
                           <span>{selectedVideo.likesCount || 0}</span>
                         </button>
                         <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">

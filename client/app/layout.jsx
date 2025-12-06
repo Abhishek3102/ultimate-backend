@@ -15,7 +15,9 @@
 import "./globals.css"
 
 import { AuthProvider } from "@/components/AuthProvider"
+import { SocketProvider } from "@/context/SocketContext"
 import Navbar from "@/components/Navbar"
+import ClientToaster from "@/components/ClientToaster"
 import "./globals.css"
 
 export default function RootLayout({ children }) {
@@ -23,8 +25,11 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body suppressHydrationWarning={true}>
         <AuthProvider>
-          <Navbar />
-          {children}
+          <SocketProvider>
+            <Navbar />
+            {children}
+            <ClientToaster />
+          </SocketProvider>
         </AuthProvider>
       </body>
     </html>

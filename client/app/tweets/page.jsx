@@ -116,7 +116,7 @@ function TweetsPageContent() {
   const fetchTweets = async () => {
     try {
       setLoading(true)
-      const response = await api.getTweets()
+      const response = await api.getUserTweets(user._id)
       setTweets(response.data || [])
     } catch (error) {
       console.error("Error fetching tweets:", error)
@@ -227,13 +227,13 @@ function TweetsPageContent() {
 
 
   const formatTime = (dateString) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60))
-
-    if (diffInHours < 1) return "now"
-    if (diffInHours < 24) return `${diffInHours}h`
-    return `${Math.floor(diffInHours / 24)}d`
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   // Mock data for non-authenticated users
@@ -292,7 +292,7 @@ function TweetsPageContent() {
       <motion.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        className="relative z-10 p-6 pt-24 bg-white/10 backdrop-blur-sm border-b border-white/20"
+        className="relative z-10 p-6 pt-32"
       >
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div className="flex items-center gap-4">
