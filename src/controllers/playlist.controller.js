@@ -57,22 +57,29 @@ export {
 
 import mongoose, { isValidObjectId } from "mongoose";
 import { Playlist } from "../models/playlist.model.js";
+import { Video } from "../models/video.model.js";
+import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 // ✅ Create a new playlist
 const createPlaylist = asyncHandler(async (req, res) => {
-  const { name, description } = req.body;
+  const { name, description, videos, isPublic } = req.body;
 
   if (!name || !description) {
     throw new ApiError(400, "Name and description are required");
   }
 
+  // videos should be an array of video IDs if provided
+  const videoIds = Array.isArray(videos) ? videos : [];
+
   const playlist = await Playlist.create({
     name,
     description,
+    videos: videoIds,
     owner: req.user._id,
+    isPublic: isPublic || false
   });
 
   return res.status(201).json(
@@ -83,15 +90,26 @@ const createPlaylist = asyncHandler(async (req, res) => {
 // ✅ Get all playlists created by a specific user
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+  const currentUserId = req.user?._id;
 
   if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid user ID");
   }
   
-  // Find all playlists in the database where the 'owner' field matches the provided userId,
-  // then populate the 'videos' field of each playlist with related video documents,
-  // but only include the 'title' and 'thumbnail' fields from each populated video.
-  const playlists = await Playlist.find({ owner: userId }).populate("videos", "title thumbnail");
+  // If viewing own playlists, show all. If viewing others, show only public.
+  const query = { owner: userId };
+  if (userId !== currentUserId?.toString()) {
+      query.isPublic = true;
+  }
+
+  const playlists = await Playlist.find(query)
+    .populate({
+      path: "videos",
+      populate: {
+        path: "owner",
+        select: "username avatar"
+      }
+    });
 
   return res.status(200).json(
     new ApiResponse(200, playlists, "User playlists fetched successfully")
@@ -108,10 +126,21 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
   const playlist = await Playlist.findById(playlistId)
     .populate("owner", "username avatar")
-    .populate("videos", "title thumbnail duration");
+    .populate({
+      path: "videos",
+      populate: {
+        path: "owner",
+        select: "username avatar"
+      }
+    });
 
   if (!playlist) {
     throw new ApiError(404, "Playlist not found");
+  }
+
+  // Check privacy
+  if (!playlist.isPublic && playlist.owner._id.toString() !== req.user?._id.toString()) {
+       throw new ApiError(403, "This playlist is private");
   }
 
   return res.status(200).json(
@@ -205,10 +234,10 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Update playlist name/description
+// ✅ Update playlist name/description/privacy
 const updatePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
-  const { name, description } = req.body;
+  const { name, description, isPublic } = req.body;
 
   if (!isValidObjectId(playlistId)) {
     throw new ApiError(400, "Invalid playlist ID");
@@ -224,10 +253,9 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     throw new ApiError(403, "You are not authorized to update this playlist");
   }
   
-  // If a new name is provided in the request body, update the playlist's name
   if (name) playlist.name = name;
-  // If a new description is provided in the request body, update the playlist's description
   if (description) playlist.description = description;
+  if (isPublic !== undefined) playlist.isPublic = isPublic;
 
   await playlist.save();
 

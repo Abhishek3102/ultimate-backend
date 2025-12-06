@@ -599,8 +599,6 @@
 //       return { data: [] };
 //     }
 //   }
-
-//   async getUserById(userId) {
 //     return this.request(`/users/${userId}`);
 //   }
 
@@ -1100,8 +1098,13 @@ class ApiClient {
   }
 
   // Video endpoints
-  async getVideos() {
-    return this.request("/videos");
+  async getVideos(userId) {
+    const queryString = userId ? `?userId=${userId}` : "";
+    return this.request(`/videos${queryString}`);
+  }
+
+  async getUserVideos(userId) {
+    return this.getVideos(userId);
   }
 
   async uploadVideo(formData) {
@@ -1126,6 +1129,10 @@ class ApiClient {
   // Tweet endpoints
   async getTweets() {
     return this.request("/tweets");
+  }
+
+  async getUserTweets(userId) {
+      return this.request(`/tweets/user/${userId}`);
   }
 
   async createTweet(content) {
@@ -1202,8 +1209,8 @@ class ApiClient {
   }
 
   // Playlist endpoints - Fixed to match backend routes
-  async getPlaylists() {
-    return this.request("/playlist/user/current-user");
+  async getPlaylists(userId) {
+    return this.request(`/playlist/user/${userId}`);
   }
 
   async createPlaylist(playlistData) {
@@ -1237,8 +1244,8 @@ class ApiClient {
   }
 
   // Subscription endpoints - Fixed to match backend routes
-  async getSubscriptions() {
-    return this.request("/subscriptions/c/current-user");
+  async getSubscribedChannels(subscriberId) {
+    return this.request(`/subscriptions/u/${subscriberId}`);
   }
 
   async toggleSubscription(channelId) {
@@ -1246,10 +1253,31 @@ class ApiClient {
   }
 
   async getChannelSubscribers(channelId) {
-    return this.request(`/subscriptions/u/${channelId}`);
+    return this.request(`/subscriptions/c/${channelId}`);
+  }
+
+  async getFollowRequests() {
+      return this.request("/subscriptions/requests/pending");
+  }
+
+  async respondToFollowRequest(subscriberId, action) {
+      return this.request(`/subscriptions/requests/respond/${subscriberId}`, {
+          method: "POST",
+          body: JSON.stringify({ action })
+      });
   }
 
   // User endpoints - Fixed to match backend routes
+  async searchUsers(query) {
+      return this.request(`/users/search?query=${query}`);
+  }
+
+  async togglePrivacy() {
+      return this.request("/users/toggle-privacy", { method: "POST" });
+  }
+
+
+
   async getUsers() {
     return this.request("/users");
   }
@@ -1258,9 +1286,31 @@ class ApiClient {
     return this.request(`/users/${userId}`);
   }
 
+  async getMessages(userId) {
+    return this.request(`/messages/${userId}`);
+  }
+
+  async getConversations() {
+      return this.request("/conversations");
+  }
+
+  async getUserChannelProfile(username) {
+    return this.request(`/users/c/${username}`);
+  }
+
   // Dashboard endpoints
   async getDashboardStats() {
     return this.request("/dashboard/stats");
+  }
+
+  // Notification endpoints
+  async getNotifications() {
+      try {
+          return await this.request("/notifications");
+      } catch (error) {
+          console.error("Get notifications error:", error);
+          return { data: [] };
+      }
   }
 
   // Health check
