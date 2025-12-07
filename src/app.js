@@ -48,6 +48,7 @@ import dashboardRouter from "./routes/dashboard.routes.js";
 import notificationRouter from "./routes/notification.routes.js";
 import messageRouter from "./routes/message.routes.js";
 import conversationRouter from "./routes/conversation.routes.js";
+import theaterRouter from "./routes/theater.routes.js";
 
 //routes declaration
 app.use("/api/v1/healthcheck", healthcheckRouter);
@@ -62,6 +63,7 @@ app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/conversations", conversationRouter);
+app.use("/api/v1/theater", theaterRouter);
 
 // http://localhost:8000/api/v1/users/register
 
