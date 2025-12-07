@@ -1307,6 +1307,18 @@ class ApiClient {
     return this.request("/dashboard/stats");
   }
 
+  // Theater / Watch Party endpoints
+  async createTheater(videoId) {
+    return this.request("/theater", {
+      method: "POST",
+      body: JSON.stringify({ videoId }),
+    });
+  }
+
+  async getTheater(roomId) {
+    return this.request(`/theater/${roomId}`);
+  }
+
   // Notification endpoints
   async getNotifications() {
       try {

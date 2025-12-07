@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { List, Plus, ArrowLeft, Video, Play, Edit, Trash2, Lock, Globe, X } from "lucide-react"
+import { List, Plus, ArrowLeft, Video, Play, Edit, Trash2, Lock, Globe, X, Eye } from "lucide-react"
 import Link from "next/link"
 import { AuthProvider, useAuth } from "@/components/AuthProvider"
 import { api } from "@/lib/api"
 
 function PlaylistsPageContent() {
+  const router = useRouter()
   const [playlists, setPlaylists] = useState([])
   const [videos, setVideos] = useState([])
   const [showCreateModal, setShowCreateModal] = useState(false)

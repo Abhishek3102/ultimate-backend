@@ -81,153 +81,165 @@ export default function HomePage() {
   ]
 
   if (!mounted) {
-    return <div className="min-h-screen bg-gradient-to-br from-purple-900 to-blue-900" />
+    return <div className="min-h-screen bg-[#020817]" />
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: "url('/placeholder.svg?height=1080&width=1920')",
-        }}
-      />
+    <div className="min-h-screen bg-[#020817]">
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/90 via-blue-900/90 to-indigo-900/90" />
+      {/* Top Section Container: Video Background + Main Content */}
+      <div className="relative overflow-hidden">
 
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 opacity-30">
-        <div
-          className="absolute w-96 h-96 bg-gradient-to-r from-pink-500 to-violet-500 rounded-full blur-3xl animate-pulse"
-          style={{
-            left: mousePosition.x / 15,
-            top: mousePosition.y / 15,
-          }}
-        />
-        <div className="absolute top-1/4 right-1/4 w-72 h-72 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur-3xl animate-bounce" />
-        <div className="absolute bottom-1/4 left-1/4 w-80 h-80 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-3xl animate-pulse" />
-      </div>
+        {/* Background Video */}
+        <div className="absolute inset-0 z-0">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          >
+            <source src="/images/homepage.mp4" type="video/mp4" />
+          </video>
+          {/* Overlay for readability */}
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-[2px]" />
+          {/* Gradient fade at bottom to blend with FAQ section */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#020817] to-transparent" />
+        </div>
 
-      {/* Hero Section */}
-      <div className="relative z-10 flex flex-col items-center justify-center min-h-[70vh] text-center px-6 pt-32">
-        <motion.h1
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-6xl md:text-8xl font-bold text-white mb-6 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent"
-        >
-          Socioverse
-        </motion.h1>
+        {/* Animated Background Elements (Optional, can keep or remove if video is enough) */}
+        <div className="absolute inset-0 opacity-30 pointer-events-none z-0">
+          <div
+            className="absolute w-96 h-96 bg-gradient-to-r from-pink-500 to-violet-500 rounded-full blur-3xl animate-pulse"
+            style={{
+              left: mousePosition.x / 15,
+              top: mousePosition.y / 15,
+            }}
+          />
+        </div>
 
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="text-xl md:text-2xl text-gray-300 mb-6 max-w-3xl"
-        >
-          Where every social world comes together.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="max-w-4xl text-gray-400 text-lg mb-10 leading-relaxed font-light"
-        >
-          <p className="mb-4">
-            Welcome to Socioverse - the world where your videos, posts, playlists, messages, and interactions come together in perfect harmony.
-          </p>
-          <p>
-            Experience a unified platform built for creators, fans, friends, and communities. Whether you're sharing a moment, uploading a masterpiece, or discovering something new, Socioverse gives you the tools to express yourself effortlessly in a connected world.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="flex flex-col sm:flex-row gap-4"
-        >
-          {isAuthenticated ? (
-            null
-          ) : (
-            <Link href="/auth">
-              <motion.button
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
-                  background: "linear-gradient(45deg, #8B5CF6, #EC4899, #06B6D4)",
-                }}
-                whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-semibold text-lg flex items-center gap-2 hover:shadow-2xl transition-all"
-              >
-                Start Your Journey <ArrowRight className="w-5 h-5" />
-              </motion.button>
-            </Link>
-          )}
-        </motion.div>
-      </div>
-
-      {/* Features Grid */}
-      <div className="relative z-10 px-6 py-12">
-        <motion.h2
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          className="text-4xl font-bold text-center text-white mb-10"
-        >
-          Platform Features
-        </motion.h2>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
+        {/* Main Content Wrapper */}
+        <div className="relative z-10 pb-20 font-[Comic_Sans_MS,Comic_Sans,cursive]">
+          {/* Hero Section */}
+          <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6 pt-32">
+            <motion.h1
               initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
-              whileHover={{
-                scale: 1.05,
-                rotateY: 5,
-                boxShadow: "0 25px 50px rgba(0,0,0,0.3)",
-              }}
-              className="group cursor-pointer"
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="text-6xl md:text-8xl font-bold text-white mb-6 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-md"
             >
-              <Link href={feature.href}>
-                <div className="p-6 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-2xl border border-white/20 hover:border-white/40 transition-all h-full">
-                  <div
-                    className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                  >
-                    <feature.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-300 text-sm leading-relaxed">{feature.desc}</p>
-                </div>
-              </Link>
+              Socioverse
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="text-xl md:text-2xl text-white mb-6 max-w-3xl drop-shadow-sm font-semibold"
+            >
+              Where every social world comes together.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="max-w-4xl text-gray-100 text-lg mb-10 leading-relaxed font-medium drop-shadow-sm"
+            >
+              <p className="mb-4">
+                Welcome to Socioverse - the world where your videos, posts, playlists, messages, and interactions come together in perfect harmony.
+              </p>
+              <p>
+                Experience a unified platform built for creators, fans, friends, and communities. Whether you're sharing a moment, uploading a masterpiece, or discovering something new, Socioverse gives you the tools to express yourself effortlessly in a connected world.
+              </p>
             </motion.div>
-          ))}
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              {isAuthenticated ? (
+                null
+              ) : (
+                <Link href="/auth">
+                  <motion.button
+                    whileHover={{
+                      scale: 1.05,
+                      boxShadow: "0 20px 40px rgba(168, 85, 247, 0.4)",
+                      background: "linear-gradient(45deg, #8B5CF6, #EC4899, #06B6D4)",
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full font-semibold text-lg flex items-center gap-2 hover:shadow-2xl transition-all font-sans"
+                  >
+                    Start Your Journey <ArrowRight className="w-5 h-5" />
+                  </motion.button>
+                </Link>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Features Grid */}
+          <div className="px-6 py-12">
+            <motion.h2
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              className="text-4xl font-bold text-center text-white mb-10"
+            >
+              Platform Features
+            </motion.h2>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+              {features.map((feature, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 50 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  whileHover={{
+                    scale: 1.05,
+                    rotateY: 5,
+                    boxShadow: "0 25px 50px rgba(0,0,0,0.3)",
+                  }}
+                  className="group cursor-pointer"
+                >
+                  <Link href={feature.href}>
+                    <div className="p-6 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-2xl border border-white/20 hover:border-white/40 transition-all h-full">
+                      <div
+                        className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
+                      >
+                        <feature.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-white mb-2">{feature.title}</h3>
+                      <p className="text-gray-300 text-sm leading-relaxed">{feature.desc}</p>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Community Highlight Section */}
+          <div className="px-6 py-12 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="max-w-4xl mx-auto bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-md rounded-3xl p-8 border border-white/10"
+            >
+              <h3 className="text-2xl font-bold text-white mb-4">A Universe of Possibilities</h3>
+              <p className="text-lg text-gray-300 leading-relaxed italic">
+                "Socioverse is more than a platform - it’s a space to express yourself, discover new voices, and bring your communities together.
+                Whether you're here to create, connect, or explore, you’re part of a universe built for endless possibilities."
+              </p>
+            </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Community Highlight Section */}
-      <div className="relative z-10 px-6 py-12 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="max-w-4xl mx-auto bg-gradient-to-r from-purple-900/40 to-blue-900/40 backdrop-blur-md rounded-3xl p-8 border border-white/10"
-        >
-          <h3 className="text-2xl font-bold text-white mb-4">A Universe of Possibilities</h3>
-          <p className="text-lg text-gray-300 leading-relaxed italic">
-            "Socioverse is more than a platform - it’s a space to express yourself, discover new voices, and bring your communities together.
-            Whether you're here to create, connect, or explore, you’re part of a universe built for endless possibilities."
-          </p>
-        </motion.div>
-      </div>
-
-      {/* FAQ Section */}
-      <div className="relative z-10 px-6 pb-20 pt-4">
+      {/* FAQ Section - Outside video container, solid background */}
+      <div className="relative z-10 px-6 py-20 bg-[#020817]">
         <motion.h2
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}

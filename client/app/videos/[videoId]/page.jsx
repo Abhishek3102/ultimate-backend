@@ -167,6 +167,21 @@ function VideoPlayerContent() {
                                         <Heart className={`w-5 h-5 ${video.isLiked ? "fill-current" : ""}`} />
                                         <span>{video.likesCount || 0}</span>
                                     </button>
+                                    <button
+                                        onClick={async () => {
+                                            if (!isAuthenticated) return alert("Please login to create a watch party")
+                                            try {
+                                                const res = await api.createTheater(video._id)
+                                                router.push(`/cinema/${res.data.roomId}`)
+                                            } catch (error) {
+                                                console.error("Failed to create watch party", error)
+                                                alert("Failed to create watch party")
+                                            }
+                                        }}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white transition-all shadow-lg shadow-purple-500/20"
+                                    >
+                                        <Eye className="w-5 h-5" /> Watch Party
+                                    </button>
                                     <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">
                                         <Share className="w-5 h-5" /> Share
                                     </button>

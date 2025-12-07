@@ -132,6 +132,67 @@ const initializeSocket = (httpServer) => {
             });
             socket.broadcast.emit("user_status_change", { userId: socket.user._id, isOnline: false, lastActive: new Date() });
         });
+        // --- Cinema / Watch Party Events ---
+        socket.on("cinema:join", ({ roomId }) => {
+            socket.join(roomId);
+            console.log(`User ${socket.user.username} (ID: ${socket.user._id}) joined theater room: ${roomId}`);
+            // Notify others
+            socket.to(roomId).emit("cinema:user-joined", { userId: socket.user._id, username: socket.user.username });
+        });
+
+        socket.on("cinema:action", ({ type, currentTime, roomId }) => {
+            // Broadcast to everyone ELSE in the room (syncing them to sender)
+            socket.to(roomId).emit("cinema:action", { type, currentTime, senderId: socket.user._id });
+        });
+
+        // Chat
+        socket.on("cinema:message", ({ roomId, text }) => {
+            io.to(roomId).emit("cinema:message", {
+                sender: { _id: socket.user._id, username: socket.user.username, avatar: socket.user.avatar },
+                text,
+                createdAt: new Date()
+            });
+        });
+
+        // Heartbeat (Host sends this periodically)
+        socket.on("cinema:heartbeat", ({ roomId, currentTime, isPlaying }) => {
+            socket.to(roomId).emit("cinema:heartbeat", { 
+                hostId: socket.user._id, 
+                currentTime, 
+                isPlaying 
+            });
+        });
+
+        socket.on("cinema:request_sync", ({ roomId }) => {
+            // New user asks "What's the current time?"
+            // Broadcast to everyone (or just host) to send back state
+            socket.to(roomId).emit("cinema:request_sync", { requesterId: socket.user._id });
+        });
+
+        socket.on("cinema:sync_state", ({ roomId, currentTime, isPlaying, requesterId }) => {
+            // Host (or someone) replies to specific requester
+            io.to(requesterId).emit("cinema:sync_state", { currentTime, isPlaying });
+        });
+
+
+        // --- Voice Chat / WebRTC Events ---
+        socket.on("voice:join", ({ roomId }) => {
+            // Notify others in room that I joined voice
+            // They will initiate offers to me
+            socket.to(roomId).emit("voice:user-connected", { userId: socket.user._id });
+        });
+
+        socket.on("voice:offer", ({ to, offer }) => {
+            io.to(to).emit("voice:offer", { from: socket.user._id, offer });
+        });
+
+        socket.on("voice:answer", ({ to, answer }) => {
+            io.to(to).emit("voice:answer", { from: socket.user._id, answer });
+        });
+
+        socket.on("voice:ice-candidate", ({ to, candidate }) => {
+            io.to(to).emit("voice:ice-candidate", { from: socket.user._id, candidate });
+        });
     });
 
     return io;

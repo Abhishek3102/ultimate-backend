@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Video, Upload, Play, Heart, Share, ArrowLeft, Eye, Clock, MessageSquare, Plus, Send } from "lucide-react"
 import Link from "next/link"
@@ -8,6 +9,7 @@ import { AuthProvider, useAuth } from "@/components/AuthProvider"
 import { api } from "@/lib/api"
 
 function VideosPageContent() {
+  const router = useRouter()
   const [videos, setVideos] = useState([])
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -488,6 +490,21 @@ function VideosPageContent() {
                         <button onClick={() => toggleLike(selectedVideo._id)} className={`flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all ${selectedVideo.likesCount > 0 ? "text-red-400" : "text-white"}`}>
                           <Heart className={`w-5 h-5 ${selectedVideo.likesCount > 0 ? "fill-current" : ""}`} />
                           <span>{selectedVideo.likesCount || 0}</span>
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!isAuthenticated) return alert("Please login to create a watch party")
+                            try {
+                              const res = await api.createTheater(selectedVideo._id)
+                              router.push(`/cinema/${res.data.roomId}`)
+                            } catch (error) {
+                              console.error("Failed to create watch party", error)
+                              alert("Failed to create watch party")
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white transition-all shadow-lg shadow-purple-500/20"
+                        >
+                          <Eye className="w-5 h-5" /> Watch Party
                         </button>
                         <button className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all">
                           <Share className="w-5 h-5" /> Share
