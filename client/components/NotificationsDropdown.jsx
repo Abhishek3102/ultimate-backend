@@ -136,10 +136,12 @@ export default function NotificationsDropdown() {
             return `/c/${notification.subscriber?.username}`
         }
         if (notification.video) {
-            return `/videos/${notification.video}`
+            const videoId = typeof notification.video === 'object' ? notification.video._id : notification.video
+            return `/videos/${videoId}`
         }
         if (notification.tweet) {
-            return `/tweets`
+            const tweetId = typeof notification.tweet === 'object' ? notification.tweet._id : notification.tweet
+            return `/tweets/${tweetId}`
         }
         return '#'
     }
@@ -186,13 +188,21 @@ export default function NotificationsDropdown() {
                             ) : (
                                 <div className="divide-y divide-white/5">
                                     {notifications.map(notification => (
-                                        <div key={notification._id} className="p-4 hover:bg-white/5 transition-colors relative">
-                                            {/* Clickable Area for Content */}
-                                            {notification.type !== 'FOLLOW_REQUEST' && (
-                                                <Link href={getLinkHref(notification)} className="absolute inset-0 z-0" onClick={() => setIsOpen(false)} />
-                                            )}
+                                        <div
+                                            key={notification._id}
+                                            className="p-4 hover:bg-white/5 transition-colors relative cursor-pointer"
+                                            onClick={(e) => {
+                                                // Prevent navigation if clicking on buttons or links
+                                                if (e.target.closest('button') || e.target.closest('a')) return
 
-                                            <div className="flex gap-3 relative z-10 pointer-events-none">
+                                                const href = getLinkHref(notification)
+                                                if (href && href !== '#') {
+                                                    setIsOpen(false)
+                                                    window.location.href = href
+                                                }
+                                            }}
+                                        >
+                                            <div className="flex gap-3">
                                                 {/* Icon based on type */}
                                                 <div className="mt-1">
                                                     {notification.type === 'FOLLOW_REQUEST' && <UserPlus className="w-5 h-5 text-blue-400" />}
@@ -200,10 +210,14 @@ export default function NotificationsDropdown() {
                                                     {notification.type === 'COMMENT' && <MessageSquare className="w-5 h-5 text-green-400" />}
                                                 </div>
 
-                                                <div className="flex-1 pointer-events-auto">
+                                                <div className="flex-1">
                                                     {/* Content */}
                                                     <div className="flex items-center justify-between mb-1">
-                                                        <Link href={`/c/${notification.type === 'FOLLOW_REQUEST' ? notification.subscriber?.username : notification.user?.username}`} className="font-semibold text-white hover:underline relative z-20">
+                                                        <Link
+                                                            href={`/c/${notification.type === 'FOLLOW_REQUEST' ? notification.subscriber?.username : notification.user?.username}`}
+                                                            className="font-semibold text-white hover:underline relative z-20"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
                                                             {notification.type === 'FOLLOW_REQUEST' ? notification.subscriber?.username : notification.user?.username}
                                                         </Link>
                                                         <span className="text-xs text-gray-500">
@@ -219,7 +233,7 @@ export default function NotificationsDropdown() {
 
                                                     {/* Follow Request Actions */}
                                                     {notification.type === 'FOLLOW_REQUEST' && (
-                                                        <div className="flex gap-2 mt-2">
+                                                        <div className="flex gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                                                             {notification.status === 'pending' ? (
                                                                 <>
                                                                     <button
@@ -245,7 +259,7 @@ export default function NotificationsDropdown() {
                                                             {!notification.isFollowingBack && (
                                                                 <button
                                                                     onClick={() => handleFollowBack(notification.subscriber._id)}
-                                                                    className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs hover:bg-purple-500/30 ml-auto pointer-events-auto"
+                                                                    className="px-3 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs hover:bg-purple-500/30 ml-auto"
                                                                 >
                                                                     Follow Back
                                                                 </button>

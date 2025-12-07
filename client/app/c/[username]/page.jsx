@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { User, Video, List, MessageSquare, Lock, UserPlus, UserCheck, UserX, Heart, Play, Eye, Clock, Share, ArrowLeft, Send } from "lucide-react"
+import { User, Video, List, MessageSquare, Lock, UserPlus, UserCheck, UserX, Heart, Play, Eye, Clock, Share, ArrowLeft, Send, Check, X } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuth } from "@/components/AuthProvider"
 import toast from "react-hot-toast"
@@ -90,6 +90,18 @@ export default function ChannelProfile() {
         } catch (error) {
             console.error(error)
             toast.error("Failed to update subscription")
+        }
+    }
+
+    const handleRespond = async (action) => {
+        try {
+            await api.respondToFollowRequest(profile._id, action)
+            toast.success(action === 'accept' ? "Request accepted" : "Request rejected")
+            // Update profile state
+            setProfile(prev => ({ ...prev, isFollowingMeStatus: action === 'accept' ? 'accepted' : 'rejected' }))
+        } catch (error) {
+            console.error(error)
+            toast.error("Failed to respond")
         }
     }
 
@@ -299,8 +311,37 @@ export default function ChannelProfile() {
                         </div>
                     </div>
 
-                    <div className="mb-4">
+                    <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-4">
                         {renderFollowButton()}
+
+                        {/* Message Button */}
+                        {!isOwner && (
+                            <Link
+                                href={`/messages/${profile._id}`}
+                                className="flex items-center gap-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-full font-medium transition-colors"
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                Message
+                            </Link>
+                        )}
+
+                        {/* Status Message for Incoming Request */}
+                        {profile.isFollowingMeStatus === 'pending' && (
+                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 duration-300">
+                                <button
+                                    onClick={() => handleRespond('accept')}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50 rounded-full text-sm font-medium transition-all"
+                                >
+                                    <Check className="w-4 h-4" /> Accept
+                                </button>
+                                <button
+                                    onClick={() => handleRespond('reject')}
+                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50 rounded-full text-sm font-medium transition-all"
+                                >
+                                    <X className="w-4 h-4" /> Reject
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 

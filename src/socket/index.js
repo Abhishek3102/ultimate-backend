@@ -34,8 +34,12 @@ const initializeSocket = (httpServer) => {
         }
     });
 
-    io.on("connection", (socket) => {
+    io.on("connection", async (socket) => {
         console.log(`User connected: ${socket.user.username}`);
+        
+        // Mark user as online
+        await User.findByIdAndUpdate(socket.user._id, { isOnline: true });
+        socket.broadcast.emit("user_status_change", { userId: socket.user._id, isOnline: true });
         
         // Join a room with their own user ID to receive direct messages
         const roomName = socket.user._id.toString();
@@ -43,11 +47,10 @@ const initializeSocket = (httpServer) => {
         console.log(`User ${socket.user.username} joined room: ${roomName}`);
 
         socket.on("join_conversation", ({ receiverId }) => {
-            // Optional: User might want to join a specific conversation room
-            // But addressing by UserID is often simpler for 1-on-1
+            // Optional
         });
 
-        socket.on("send_message", async ({ receiverId, content }) => {
+        socket.on("send_message", async ({ receiverId, content, audioUrl }) => {
             try {
                 // 1. Find or create conversation
                 let conversation = await Conversation.findOne({
@@ -64,7 +67,8 @@ const initializeSocket = (httpServer) => {
                 const newMessage = await Message.create({
                     sender: socket.user._id,
                     conversation: conversation._id,
-                    content
+                    content: content || "", // Allow empty if audioUrl
+                    audioUrl: audioUrl || undefined
                 });
 
                 // Update last message in conversation
@@ -86,9 +90,47 @@ const initializeSocket = (httpServer) => {
                 socket.emit("error", { message: "Failed to send message" });
             }
         });
+        
+        socket.on("mark_read", async ({ messageIds, otherUserId }) => {
+            try {
+               if(!messageIds || !messageIds.length) return;
+               
+               const readAt = new Date();
+               
+               await Message.updateMany(
+                   { 
+                       _id: { $in: messageIds },
+                       "readBy.user": { $ne: socket.user._id }
+                   },
+                   { 
+                       $push: { 
+                           readBy: { 
+                               user: socket.user._id, 
+                               readAt: readAt 
+                           } 
+                       } 
+                   }
+               );
+               
+               // Notify the sender that I have read their messages
+               io.to(otherUserId).emit("messages_read", { 
+                   messageIds, 
+                   readBy: socket.user._id,
+                   readAt: readAt
+               });
+               
+            } catch (error) {
+                console.error("Mark read error", error);
+            }
+        });
 
-        socket.on("disconnect", () => {
+        socket.on("disconnect", async () => {
             console.log("User disconnected:", socket.user.username);
+            await User.findByIdAndUpdate(socket.user._id, { 
+                isOnline: false, 
+                lastActive: new Date() 
+            });
+            socket.broadcast.emit("user_status_change", { userId: socket.user._id, isOnline: false, lastActive: new Date() });
         });
     });
 

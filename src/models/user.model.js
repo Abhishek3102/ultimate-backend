@@ -48,6 +48,14 @@ const userSchema = new Schema(
         isPrivate: {
             type: Boolean,
             default: false
+        },
+        isOnline: {
+            type: Boolean,
+            default: false
+        },
+        lastActive: {
+            type: Date,
+            default: Date.now
         }
 
     },

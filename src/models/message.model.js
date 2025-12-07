@@ -13,11 +13,20 @@ const messageSchema = new Schema({
     },
     content: {
         type: String,
-        required: true
+        // Content is required only if no audioUrl
+    },
+    audioUrl: {
+        type: String // Cloudinary URL
     },
     readBy: [{
-        type: Schema.Types.ObjectId,
-        ref: "User"
+        user: {
+            type: Schema.Types.ObjectId,
+            ref: "User"
+        },
+        readAt: {
+            type: Date,
+            default: Date.now
+        }
     }]
 }, { timestamps: true });
 

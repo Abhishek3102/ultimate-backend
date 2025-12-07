@@ -220,7 +220,7 @@ export default function HomePage() {
         >
           <h3 className="text-2xl font-bold text-white mb-4">A Universe of Possibilities</h3>
           <p className="text-lg text-gray-300 leading-relaxed italic">
-            "Socioverse is more than a platform — it’s a space to express yourself, discover new voices, and bring your communities together.
+            "Socioverse is more than a platform - it’s a space to express yourself, discover new voices, and bring your communities together.
             Whether you're here to create, connect, or explore, you’re part of a universe built for endless possibilities."
           </p>
         </motion.div>
