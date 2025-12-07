@@ -481,6 +481,21 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
             }
         },
         {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                pipeline: [
+                    {
+                        $match: {
+                            channel: new mongoose.Types.ObjectId(req.user?._id)
+                        }
+                    }
+                ],
+                as: "isFollowingMe" // Check if they follow me
+            }
+        },
+        {
             $addFields: {
                 subscribersCount: {
                     $size: "$subscribers"
@@ -502,6 +517,9 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 },
                 subscriptionStatus: {
                      $arrayElemAt: ["$mySubscription.status", 0] 
+                },
+                isFollowingMeStatus: {
+                    $arrayElemAt: ["$isFollowingMe.status", 0]
                 }
             }
         },
@@ -513,6 +531,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 channelsSubscribedToCount: 1,
                 isSubscribed: 1,
                 subscriptionStatus: 1,
+                isFollowingMeStatus: 1,
                 avatar: 1,
                 coverImage: 1,
                 email: 1,

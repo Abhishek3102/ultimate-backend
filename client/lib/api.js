@@ -1135,6 +1135,10 @@ class ApiClient {
       return this.request(`/tweets/user/${userId}`);
   }
 
+  async getTweetById(tweetId) {
+    return this.request(`/tweets/${tweetId}`);
+  }
+
   async createTweet(content) {
     return this.request("/tweets", {
       method: "POST",
@@ -1316,6 +1320,23 @@ class ApiClient {
   // Health check
   async healthCheck() {
     return this.request("/healthcheck");
+  }
+  async uploadMessageAudio(formData) {
+    return this.request("/messages/upload-audio", {
+      method: "POST",
+      body: formData,
+      headers: {},
+    });
+  }
+
+  async deleteMessage(messageId) {
+    return this.request(`/messages/delete/${messageId}`, {
+        method: "DELETE"
+    });
+  }
+
+  async getUserConversations() {
+    return this.request("/conversations");
   }
 }
 

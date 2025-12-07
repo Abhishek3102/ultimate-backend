@@ -8,10 +8,16 @@ dotenv.config({
     path: './.env'
 })
 
+import { User } from "./models/user.model.js";
+
 connectDB()
-.then(() => {
+.then(async () => {
+    // Reset all users to offline on server start
+    await User.updateMany({ isOnline: true }, { $set: { isOnline: false } });
+
     const httpServer = createServer(app);
     const io = initializeSocket(httpServer);
+    app.set("io", io);
 
     httpServer.listen(process.env.PORT || 8000, () => {
         console.log(`⚙️ Server is running at port : ${process.env.PORT}`);
