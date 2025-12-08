@@ -1,16 +1,35 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { ArrowRight, Users, Video, MessageSquare, Heart, List, UserPlus, Settings, Activity, HelpCircle, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { AuthProvider, useAuth } from "@/components/AuthProvider"
 import LogoutButton from "@/components/LogoutButton"
+import PulseBar from "@/components/MindMeld/PulseBar"
+import MeldModal from "@/components/MindMeld/MeldModal"
+import { useSocket } from "@/context/SocketContext"
 
 export default function HomePage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [mounted, setMounted] = useState(false)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const { socket } = useSocket()
+  const [meldData, setMeldData] = useState(null)
+
+  useEffect(() => {
+    if (!socket) return
+
+    const onFound = (data) => {
+      setMeldData(data)
+    }
+
+    socket.on("mindmeld:found", onFound)
+
+    return () => {
+      socket.off("mindmeld:found", onFound)
+    }
+  }, [socket])
 
   useEffect(() => {
     setMounted(true)
@@ -141,6 +160,15 @@ export default function HomePage() {
             </motion.p>
 
             <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.25 }}
+              className="w-full mb-8"
+            >
+              <PulseBar socket={socket} />
+            </motion.div>
+
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
@@ -255,7 +283,20 @@ export default function HomePage() {
           ))}
         </div>
       </div>
-    </div>
+
+      <AnimatePresence>
+        {meldData && (
+          <MeldModal
+            user={user}
+            socket={socket}
+            roomId={meldData.roomId}
+            matchedContent={meldData.matchedContent}
+            similarity={meldData.similarity}
+            onClose={() => setMeldData(null)}
+          />
+        )}
+      </AnimatePresence>
+    </div >
   )
 }
 

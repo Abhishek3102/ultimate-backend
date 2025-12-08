@@ -116,10 +116,14 @@ const createTweet = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Tweet content is required");
   }
 
+  // Extract hashtags
+  const hashtags = content.match(/#[a-z0-9_\-]+/gi) || [];
+
   // Create tweet in DB with owner as the logged-in user
   const tweet = await Tweet.create({
     content,
     owner: req.user._id,
+    hashtags
   });
 
   return res.status(201).json(

@@ -1347,6 +1347,26 @@ class ApiClient {
     });
   }
 
+  // Prism endpoints
+  async getTrendingTopics() {
+    try {
+      return await this.request("/prism/trending");
+    } catch (error) {
+      console.error("Get trending topics error:", error);
+      return { data: [] };
+    }
+  }
+
+  async getPrismFeed(topic) {
+    const encodedTopic = encodeURIComponent(topic);
+    try {
+      return await this.request(`/prism/feed/${encodedTopic}`);
+    } catch (error) {
+      console.error("Get prism feed error:", error);
+      return { data: { pro: [], anti: [], neutral: [] } };
+    }
+  }
+
   async getUserConversations() {
     return this.request("/conversations");
   }

@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
 import { Message } from "../models/message.model.js";
 import { Conversation } from "../models/conversation.model.js";
+import { Pulse } from "../models/pulse.model.js";
+import { generateEmbedding, calculateSimilarity } from "../utils/gemini.js";
 
 const initializeSocket = (httpServer) => {
     const io = new Server(httpServer, {
@@ -192,6 +194,110 @@ const initializeSocket = (httpServer) => {
 
         socket.on("voice:ice-candidate", ({ to, candidate }) => {
             io.to(to).emit("voice:ice-candidate", { from: socket.user._id, candidate });
+        });
+
+        // --- MindMeld Events ---
+        socket.on("pulse:submit", async ({ content }) => {
+            try {
+                console.log(`Pulse received from ${socket.user.username}: ${content}`);
+                
+                // 1. Generate Vector
+                const embedding = await generateEmbedding(content);
+                
+                // 2. Save Pulse
+                const newPulse = await Pulse.create({
+                    content,
+                    embedding,
+                    userId: socket.user._id,
+                    status: "pending"
+                });
+
+                // 3. The Dragnet: Find recent pending pulses (last 10 mins)
+                const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
+                const pendingPulses = await Pulse.find({
+                    status: "pending",
+                    userId: { $ne: socket.user._id },
+                    createdAt: { $gte: tenMinsAgo }
+                }).populate("userId", "username");
+
+                // 4. Similarity Check
+                let bestMatch = null;
+                let maxSim = -1;
+
+                for (const otherPulse of pendingPulses) {
+                    const similarity = calculateSimilarity(embedding, otherPulse.embedding);
+                    // Threshold: 0.70
+                    if (similarity > 0.70 && similarity > maxSim) {
+                        maxSim = similarity;
+                        bestMatch = otherPulse;
+                    }
+                }
+
+                if (bestMatch) {
+                    // MATCH FOUND!
+                    console.log(`MindMeld Match Found! Sim: ${maxSim}`);
+                    
+                    // Update Status
+                    newPulse.status = "matched";
+                    newPulse.matchedWith = bestMatch.userId._id;
+                    await newPulse.save();
+
+                    bestMatch.status = "matched";
+                    bestMatch.matchedWith = socket.user._id;
+                    await bestMatch.save();
+
+                    // Room ID
+                    const roomId = `meld_${newPulse._id}_${bestMatch._id}`;
+
+                    // Emit to THIS user
+                    socket.join(roomId);
+                    socket.emit("mindmeld:found", { 
+                        roomId, 
+                        matchedContent: bestMatch.content,
+                        similarity: maxSim 
+                    });
+
+                    // Emit to OTHER user
+                    const otherUserId = bestMatch.userId._id.toString();
+                    io.in(otherUserId).socketsJoin(roomId); 
+                    
+                    io.to(otherUserId).emit("mindmeld:found", {
+                        roomId,
+                        matchedContent: newPulse.content,
+                        similarity: maxSim
+                    });
+
+                } else {
+                    socket.emit("pulse:saved", { message: "Pulse sent to the universe..." });
+                }
+
+            } catch (error) {
+                console.error("Pulse Error:", error);
+                socket.emit("error", { message: "Failed to process pulse" });
+            }
+        });
+
+        socket.on("mindmeld:message", ({ roomId, text }) => {
+            io.to(roomId).emit("mindmeld:message", {
+                senderId: socket.user._id,
+                text,
+                createdAt: new Date()
+            });
+        });
+
+        socket.on("mindmeld:reveal", ({ roomId }) => {
+            io.to(roomId).emit("mindmeld:reveal", {
+                user: {
+                    _id: socket.user._id,
+                    username: socket.user.username,
+                    avatar: socket.user.avatar
+                }
+            });
+        });
+
+        socket.on("mindmeld:leave", ({ roomId }) => {
+             socket.to(roomId).emit("mindmeld:left");
+             socket.leave(roomId);
         });
     });
 
