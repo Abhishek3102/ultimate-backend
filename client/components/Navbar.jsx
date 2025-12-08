@@ -25,9 +25,17 @@ export default function Navbar() {
                 }`}
         >
             <Link href="/">
-                <motion.div whileHover={{ scale: 1.1 }} className="text-2xl font-bold text-white flex items-center gap-2 cursor-pointer">
-                    <Video className="text-yellow-400" />
-                    Socioverse
+                <motion.div whileHover={{ scale: 1.05 }} className="flex items-center gap-0 cursor-pointer">
+                    <img
+                        src="/images/logo 2 visual.png"
+                        alt="Socioverse Visual"
+                        className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <img
+                        src="/images/logo 2 text.png"
+                        alt="Socioverse Text"
+                        className="h-8 w-auto object-contain -ml-1"
+                    />
                 </motion.div>
             </Link>
 

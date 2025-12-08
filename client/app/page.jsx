@@ -141,14 +141,23 @@ export default function HomePage() {
         <div className="relative z-10 pb-20 font-[Comic_Sans_MS,Comic_Sans,cursive]">
           {/* Hero Section */}
           <div className="flex flex-col items-center justify-center min-h-[70vh] text-center px-6 pt-32">
-            <motion.h1
+            <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
-              className="text-6xl md:text-8xl font-bold text-white mb-6 bg-gradient-to-r from-pink-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent drop-shadow-md"
+              className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6"
             >
-              Socioverse
-            </motion.h1>
+              <img
+                src="/images/logo 2 visual.png"
+                alt="Socioverse Visual"
+                className="w-24 h-24 md:w-32 md:h-32 rounded-full object-cover shadow-2xl shadow-purple-500/20"
+              />
+              <img
+                src="/images/logo 2 text.png"
+                alt="Socioverse Text"
+                className="h-16 md:h-20 w-auto object-contain drop-shadow-lg"
+              />
+            </motion.div>
 
             <motion.p
               initial={{ opacity: 0, y: 30 }}
