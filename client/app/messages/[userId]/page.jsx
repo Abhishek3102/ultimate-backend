@@ -6,6 +6,14 @@ import { useSocket } from "@/context/SocketContext"
 import { useAuth } from "@/components/AuthProvider"
 import { api } from "@/lib/api"
 import { Send, ArrowLeft, MoreVertical, Phone, Video, Mic, Check, Trash2, Forward as ForwardIcon, Info, ChevronDown, CheckCheck, X, Copy } from "lucide-react"
+import VideoCallModal from "@/components/VideoCallModal"
+
+const ICE_SERVERS = {
+    iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:global.stun.twilio.com:3478" } // Backup free STUN
+    ]
+};
 
 export default function ChatPage() {
     const { userId } = useParams()
@@ -29,9 +37,22 @@ export default function ChatPage() {
     const [conversations, setConversations] = useState([])
     const [messageToForward, setMessageToForward] = useState(null)
 
+    // --- WebRTC / Call States ---
+    const [callModalOpen, setCallModalOpen] = useState(false)
+    const [callStatus, setCallStatus] = useState("idle") // idle, calling, incoming, connected, ended
+    const [localStream, setLocalStream] = useState(null)
+    const [remoteStream, setRemoteStream] = useState(null)
+    const [incomingCallDetails, setIncomingCallDetails] = useState(null) // { from,callerName, offer, isVideo }
+    const [isVideoCall, setIsVideoCall] = useState(true)
+
     const messagesEndRef = useRef(null)
     const mediaRecorderRef = useRef(null)
     const audioChunksRef = useRef([])
+
+    // WebRTC Refs
+    const peerConnectionRef = useRef(null)
+    const localStreamRef = useRef(null)
+    const iceCandidatesQueue = useRef([]) // Store candidates before PC is ready
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -69,6 +90,15 @@ export default function ChatPage() {
         }
     }, [userId, currentUser])
 
+    // --- Socket Event Listeners ---
+    // Keep track of callStatus in a ref for socket listeners without triggering re-runs
+    const callStatusRef = useRef(callStatus);
+
+    useEffect(() => {
+        callStatusRef.current = callStatus;
+    }, [callStatus]);
+
+    // --- Socket Event Listeners ---
     useEffect(() => {
         if (!socket) return
 
@@ -77,8 +107,6 @@ export default function ChatPage() {
             if (senderId === userId) {
                 setMessages(prev => [...prev, message])
                 setTimeout(scrollToBottom, 50)
-
-                // Mark this new message as read immediately since we are viewing the chat
                 socket.emit("mark_read", { messageIds: [message._id], otherUserId: userId })
             }
         })
@@ -86,10 +114,8 @@ export default function ChatPage() {
         socket.on("messages_read", ({ messageIds, readBy, readAt }) => {
             setMessages(prev => prev.map(msg => {
                 if (messageIds.includes(msg._id)) {
-                    // Avoid duplicate entries
                     const existing = msg.readBy || [];
                     if (existing.some(r => (r.user?._id || r.user || r) === readBy)) return msg;
-
                     return {
                         ...msg,
                         readBy: [...existing, { user: readBy, readAt: readAt || new Date() }]
@@ -109,29 +135,256 @@ export default function ChatPage() {
             }
         })
 
+        // --- Call Signaling Events ---
+        socket.on("call:invite", async ({ from, callerName, callerAvatar, offer, isVideo }) => {
+            if (callStatusRef.current !== "idle") {
+                return; // Busy
+            }
+            console.log("Incoming call from:", callerName, "Video:", isVideo);
+            setIncomingCallDetails({ from, callerName, callerAvatar, offer, isVideo });
+            setCallStatus("incoming");
+            setCallModalOpen(true);
+            setIsVideoCall(isVideo);
+            iceCandidatesQueue.current = []; // Reset queue
+        });
+
+        socket.on("call:answer", async ({ from, answer }) => {
+            console.log("Call answered by:", from);
+            if (callStatusRef.current === "calling" && peerConnectionRef.current) {
+                try {
+                    await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+                    setCallStatus("connected");
+                    // Process any queued candidates that arrived before the answer
+                    await processIceQueue();
+                } catch (err) {
+                    console.error("Error setting remote description", err);
+                }
+            }
+        });
+
+        socket.on("call:ice-candidate", async ({ candidate }) => {
+            if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+                try {
+                    await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (err) {
+                    console.error("Error adding ICE candidate", err);
+                }
+            } else {
+                console.log("Queueing ICE candidate (PC not ready)");
+                iceCandidatesQueue.current.push(candidate);
+            }
+        });
+
+        socket.on("call:end", () => {
+            console.log("Call ended by peer");
+            endCallCleanup();
+        });
+
+        socket.on("call:reject", () => {
+            alert("Call declined");
+            endCallCleanup();
+        });
+
+
         return () => {
             socket.off("receive_message")
             socket.off("messages_read")
             socket.off("message_deleted")
             socket.off("user_status_change")
+            socket.off("call:invite")
+            socket.off("call:answer")
+            socket.off("call:ice-candidate")
+            socket.off("call:end")
+            socket.off("call:reject")
+
+            if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach(track => track.stop());
+            }
+            if (peerConnectionRef.current) {
+                peerConnectionRef.current.close();
+            }
         }
-    }, [socket, userId, currentUser])
+    }, [socket, userId, currentUser]); // Removed callStatus to prevent cleanup on status change
+
+    // --- WebRTC Logic ---
+
+    const processIceQueue = async () => {
+        if (!peerConnectionRef.current) return;
+        while (iceCandidatesQueue.current.length > 0) {
+            const candidate = iceCandidatesQueue.current.shift();
+            try {
+                await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+                console.log("Added queued ICE candidate");
+            } catch (err) {
+                console.error("Error processing queued ICE", err);
+            }
+        }
+    };
+
+    const initializePeerConnection = () => {
+        const pc = new RTCPeerConnection(ICE_SERVERS);
+
+        pc.onicecandidate = (event) => {
+            if (event.candidate) {
+                // Target ID logic: if calling, target is userId. If answering, target is incoming caller.
+                const targetId = incomingCallDetails ? incomingCallDetails.from : userId;
+                socket.emit("call:ice-candidate", {
+                    to: targetId,
+                    candidate: event.candidate
+                });
+            }
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            console.log("ICE Connection State:", pc.iceConnectionState);
+        };
+
+        pc.onsignalingstatechange = () => {
+            console.log("Signaling State:", pc.signalingState);
+        };
+
+        pc.ontrack = (event) => {
+            const stream = event.streams[0];
+            console.log("Remote track received:", stream.id, event.track.kind);
+            // Create a new MediaStream to ensure React state updates even if the reference hasn't changed
+            setRemoteStream(new MediaStream(stream.getTracks()));
+        };
+
+        peerConnectionRef.current = pc;
+        return pc;
+    };
+
+    const getLocalStream = async (video = true) => {
+        // Return existing stream ONLY if it is active and tracks are live
+        if (localStreamRef.current && localStreamRef.current.active) {
+            const videoTracks = localStreamRef.current.getVideoTracks();
+            const audioTracks = localStreamRef.current.getAudioTracks();
+
+            const hasVideo = videoTracks.length > 0;
+            const videoTrackLive = hasVideo ? videoTracks[0].readyState === "live" : false;
+            const audioTrackLive = audioTracks.length > 0 ? audioTracks[0].readyState === "live" : false;
+
+            // If we want video, we must have a live video track.
+            // If we only want audio, we must have a live audio track.
+            // Also ensure we aren't returning an audio-only stream when video is requested.
+            if (hasVideo === video && (video ? videoTrackLive : true) && audioTrackLive) {
+                console.log("Reusing existing local stream");
+                return localStreamRef.current;
+            }
+        }
+
+        try {
+            console.log("Requesting new local stream...");
+            const stream = await navigator.mediaDevices.getUserMedia({ video, audio: true });
+            setLocalStream(stream);
+            localStreamRef.current = stream;
+            return stream;
+        } catch (err) {
+            console.error("Error accessing media devices", err);
+            alert("Could not access camera/microphone");
+            return null;
+        }
+    };
+
+    const startCall = async (video = true) => {
+        setIsVideoCall(video);
+        setCallStatus("calling");
+        setCallModalOpen(true);
+
+        const stream = await getLocalStream(video);
+        if (!stream) {
+            endCallCleanup();
+            return;
+        }
+
+        const pc = initializePeerConnection();
+        // Add tracks
+        stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        socket.emit("call:invite", {
+            to: userId,
+            offer,
+            isVideo: video
+        });
+    };
+
+    const answerCall = async () => {
+        if (!incomingCallDetails) return;
+
+        setCallStatus("connected");
+        const { offer, from, isVideo } = incomingCallDetails;
+
+        // Use caller's video preference for stream constraints or default to matching
+        const stream = await getLocalStream(isVideo);
+
+        const pc = initializePeerConnection();
+        if (stream) {
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+        }
+
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+
+        // IMPORTANT: Process queue AFTER setting remote description
+        await processIceQueue();
+
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+
+        socket.emit("call:answer", {
+            to: from,
+            answer
+        });
+    };
+
+    const rejectCall = () => {
+        if (incomingCallDetails) {
+            socket.emit("call:reject", { to: incomingCallDetails.from });
+        }
+        endCallCleanup();
+    };
+
+    const endCall = () => {
+        const targetId = incomingCallDetails ? incomingCallDetails.from : userId;
+        socket.emit("call:end", { to: targetId });
+        endCallCleanup();
+    };
+
+    const endCallCleanup = () => {
+        setCallStatus("ended");
+        setTimeout(() => {
+            setCallModalOpen(false);
+            setCallStatus("idle");
+            setIncomingCallDetails(null);
+        }, 1000); // Show "Ended" for 1s
+
+        if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach(track => track.stop());
+            setLocalStream(null);
+            localStreamRef.current = null;
+        }
+        setRemoteStream(null);
+        if (peerConnectionRef.current) {
+            peerConnectionRef.current.close();
+            peerConnectionRef.current = null;
+        }
+    };
+
 
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
             mediaRecorderRef.current = new MediaRecorder(stream)
             audioChunksRef.current = []
-
             mediaRecorderRef.current.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
-
             mediaRecorderRef.current.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' }) // webm is common
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
                 await sendAudioMessage(audioBlob)
                 const tracks = stream.getTracks()
                 tracks.forEach(track => track.stop())
             }
-
             mediaRecorderRef.current.start()
             setIsRecording(true)
         } catch (error) {
@@ -151,19 +404,13 @@ export default function ChatPage() {
         setIsUploadingAudio(true)
         try {
             const formData = new FormData()
-            // Append with filename for multer
             formData.append("audio", audioBlob, "voice-message.webm")
-
             const res = await api.uploadMessageAudio(formData)
             const { audioUrl } = res.data
 
             if (audioUrl) {
-                const payload = {
-                    receiverId: userId,
-                    audioUrl
-                }
+                const payload = { receiverId: userId, audioUrl }
                 socket.emit("send_message", payload)
-
                 setMessages(prev => [...prev, {
                     _id: Date.now().toString(),
                     sender: currentUser,
@@ -183,14 +430,8 @@ export default function ChatPage() {
     const handleSendMessage = (e) => {
         e.preventDefault()
         if (!newMessage.trim() || !socket) return
-
-        const payload = {
-            receiverId: userId,
-            content: newMessage
-        }
-
+        const payload = { receiverId: userId, content: newMessage }
         socket.emit("send_message", payload)
-
         setMessages(prev => [...prev, {
             _id: Date.now().toString(),
             sender: currentUser,
@@ -198,7 +439,6 @@ export default function ChatPage() {
             createdAt: new Date().toISOString(),
             readBy: []
         }])
-
         setNewMessage("")
         setTimeout(scrollToBottom, 50)
     }
@@ -207,7 +447,7 @@ export default function ChatPage() {
     const handleDeleteMessage = async (msgId) => {
         try {
             await api.deleteMessage(msgId)
-            setMessages(prev => prev.filter(m => m._id !== msgId)) // Optimistic
+            setMessages(prev => prev.filter(m => m._id !== msgId))
             setActiveMessageId(null)
         } catch (error) {
             console.error("Failed to delete", error)
@@ -238,16 +478,13 @@ export default function ChatPage() {
 
     const handleForwardToUser = (targetUserId) => {
         if (!messageToForward || !socket) return;
-
         const payload = {
             receiverId: targetUserId,
             content: messageToForward.content,
             audioUrl: messageToForward.audioUrl
         }
-
-        socket.emit("send_message", payload);
+        socket.emit("send_message", payload)
         alert("Message forwarded!");
-
         setForwardModalOpen(false);
         setMessageToForward(null);
     }
@@ -255,11 +492,9 @@ export default function ChatPage() {
     const getLastSeenText = () => {
         if (otherUser?.isOnline) return "Online"
         if (!otherUser?.lastActive) return "Offline"
-
         const last = new Date(otherUser.lastActive)
         const now = new Date()
         const diffMins = Math.floor((now - last) / 60000)
-
         if (diffMins < 1) return "Last seen just now"
         if (diffMins < 60) return `Last seen ${diffMins}m ago`
         if (diffMins < 1440) {
@@ -269,10 +504,8 @@ export default function ChatPage() {
         return `Last seen ${last.toLocaleDateString()} at ${last.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
     }
 
-    // Close dropdowns on click outside
     useEffect(() => {
         const handleClickOutside = (event) => {
-            // Check if the click is outside any message dropdown
             if (activeMessageId && !event.target.closest('.message-dropdown-container')) {
                 setActiveMessageId(null);
             }
@@ -291,6 +524,24 @@ export default function ChatPage() {
 
     return (
         <div className="min-h-screen bg-[#020817] text-white flex flex-col pt-20 relative">
+            <VideoCallModal
+                isOpen={callModalOpen}
+                onClose={() => { if (callStatus === 'ended') setCallModalOpen(false); else endCall(); }}
+                localStream={localStream}
+                remoteStream={remoteStream}
+                isCaller={callStatus === 'calling'}
+                status={callStatus}
+                callerDetails={
+                    callStatus === 'incoming'
+                        ? { name: incomingCallDetails?.callerName, avatar: incomingCallDetails?.callerAvatar }
+                        : { name: otherUser?.fullName, avatar: otherUser?.avatar }
+                }
+                onAnswer={answerCall}
+                onReject={rejectCall}
+                onEndCall={endCall}
+                isVideoEnabled={isVideoCall}
+            />
+
             {/* Info Modal */}
             {infoMessage && (
                 <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
@@ -341,8 +592,6 @@ export default function ChatPage() {
                                 <p className="text-gray-500 text-center py-8">No recent conversations found</p>
                             ) : (
                                 conversations.map(conv => {
-                                    // Find the other participant in this conservation
-                                    // Assuming conversations have 'participants' populated
                                     const other = conv.participants?.find(p => p._id !== currentUser?._id);
                                     if (!other) return null;
 
@@ -392,8 +641,18 @@ export default function ChatPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-4 text-gray-400">
-                    <button className="hover:text-purple-400 transition-colors"><Phone className="w-5 h-5" /></button>
-                    <button className="hover:text-purple-400 transition-colors"><Video className="w-5 h-5" /></button>
+                    <button
+                        onClick={() => startCall(false)} // Audio only
+                        className="hover:text-purple-400 transition-colors p-2 hover:bg-white/5 rounded-full"
+                    >
+                        <Phone className="w-5 h-5" />
+                    </button>
+                    <button
+                        onClick={() => startCall(true)} // Video
+                        className="hover:text-purple-400 transition-colors p-2 hover:bg-white/5 rounded-full"
+                    >
+                        <Video className="w-5 h-5" />
+                    </button>
                     <button className="hover:text-white transition-colors"><MoreVertical className="w-5 h-5" /></button>
                 </div>
             </div>
@@ -402,14 +661,13 @@ export default function ChatPage() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                 {messages.map((msg, idx) => {
                     const isMe = (msg.sender?._id || msg.sender) === currentUser?._id
-                    // Refined 'read' check for object or ID
                     const isRead = msg.readBy?.some(r => {
                         const uId = r.user?._id || r.user || r;
                         return uId === otherUser?._id
                     });
 
                     return (
-                        <div key={msg._id} className={`flex gap-3 ${isMe ? "justify-end" : "justify-start"} group relative`}>
+                        <div key={msg._id || idx} className={`flex gap-3 ${isMe ? "justify-end" : "justify-start"} group relative`}>
                             {!isMe && (
                                 <img src={otherUser?.avatar || "/placeholder.svg"} className="w-8 h-8 rounded-full object-cover self-end mb-1" />
                             )}
@@ -417,8 +675,7 @@ export default function ChatPage() {
                             <div className={`relative max-w-[70%] p-3 rounded-2xl ${isMe
                                 ? "bg-purple-600 text-white rounded-br-none"
                                 : "bg-slate-800 text-gray-200 rounded-bl-none"
-                                } message-dropdown-container`}> {/* Added class for click outside */}
-                                {/* Message Dropdown Trigger */}
+                                } message-dropdown-container`}>
                                 <button
                                     onClick={(e) => { e.stopPropagation(); setActiveMessageId(activeMessageId === msg._id ? null : msg._id) }}
                                     className={`absolute top-1 right-1 p-1 rounded-full bg-black/20 hover:bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity ${activeMessageId === msg._id ? 'opacity-100' : ''}`}
@@ -426,7 +683,6 @@ export default function ChatPage() {
                                     <ChevronDown className="w-3 h-3 text-white" />
                                 </button>
 
-                                {/* Dropdown Menu */}
                                 {activeMessageId === msg._id && (
                                     <div className="absolute top-6 right-2 bg-slate-900 border border-white/10 rounded-lg shadow-xl py-1 z-20 min-w-[140px] animate-in fade-in zoom-in-95 duration-100">
                                         <button onClick={() => { setInfoMessage(msg); setActiveMessageId(null); }} className="w-full text-left px-4 py-2 hover:bg-white/5 flex items-center gap-2 text-sm text-gray-300 hover:text-white">
@@ -486,12 +742,11 @@ export default function ChatPage() {
                         className="flex-1 bg-slate-800 border-none rounded-full px-6 py-3 text-white focus:ring-2 focus:ring-purple-500 transition-all placeholder:text-gray-500"
                     />
 
-                    {/* Mic Button */}
                     <button
                         type="button"
                         onMouseDown={startRecording}
                         onMouseUp={stopRecording}
-                        onMouseLeave={stopRecording} // Stop if dragged out
+                        onMouseLeave={stopRecording}
                         className={`p-3 rounded-full transition-all flex-shrink-0 ${isRecording ? "bg-red-500 text-white animate-pulse shadow-red-500/50 shadow-lg" : "bg-slate-800 text-gray-400 hover:text-white"
                             }`}
                         title="Hold to record"

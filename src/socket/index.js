@@ -177,23 +177,38 @@ const initializeSocket = (httpServer) => {
         });
 
 
-        // --- Voice Chat / WebRTC Events ---
-        socket.on("voice:join", ({ roomId }) => {
-            // Notify others in room that I joined voice
-            // They will initiate offers to me
-            socket.to(roomId).emit("voice:user-connected", { userId: socket.user._id });
+        // --- Video/Voice Call Signaling ---
+        socket.on("call:invite", ({ to, offer, isVideo }) => {
+            // 'to' is the receiver's userId
+            io.to(to).emit("call:invite", { 
+                from: socket.user._id, 
+                callerName: socket.user.fullName, // Send name for UI
+                callerAvatar: socket.user.avatar,
+                offer,
+                isVideo
+            });
         });
 
-        socket.on("voice:offer", ({ to, offer }) => {
-            io.to(to).emit("voice:offer", { from: socket.user._id, offer });
+        socket.on("call:answer", ({ to, answer }) => {
+            io.to(to).emit("call:answer", { 
+                from: socket.user._id, 
+                answer 
+            });
         });
 
-        socket.on("voice:answer", ({ to, answer }) => {
-            io.to(to).emit("voice:answer", { from: socket.user._id, answer });
+        socket.on("call:ice-candidate", ({ to, candidate }) => {
+            io.to(to).emit("call:ice-candidate", { 
+                from: socket.user._id, 
+                candidate 
+            });
         });
 
-        socket.on("voice:ice-candidate", ({ to, candidate }) => {
-            io.to(to).emit("voice:ice-candidate", { from: socket.user._id, candidate });
+        socket.on("call:end", ({ to }) => {
+            io.to(to).emit("call:end", { from: socket.user._id });
+        });
+
+        socket.on("call:reject", ({ to }) => {
+            io.to(to).emit("call:reject", { from: socket.user._id });
         });
 
         // --- MindMeld Events ---
