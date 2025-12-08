@@ -8,6 +8,20 @@ const tweetSchema = new Schema({
     owner: {
         type: Schema.Types.ObjectId,
         ref: "User"
+    },
+    hashtags: [String],
+    prism_data: {
+        sentiment: {
+            type: String,
+            enum: ['pro', 'anti', 'neutral'],
+        },
+        rationality_score: Number,
+        topic: String,
+        category: {
+            type: String,
+            enum: ['Tech', 'Sports', 'Finance', 'Health', 'Politics', 'Entertainment', 'Other'],
+            default: 'Other'
+        }
     }
 }, {timestamps: true})
 
