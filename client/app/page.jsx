@@ -304,24 +304,28 @@ export default function HomePage() {
 
 const faqs = [
   {
-    question: "What is Socioverse?",
-    answer: "Socioverse is a comprehensive social video platform designed to bring creators and viewers together. It empowers you to upload, share, and discover high-quality video content while connecting with a vibrant community through tweets, likes, and comments."
+    question: "What makes Socioverse unique?",
+    answer: "Socioverse isn't just a video platform—it's a multi-dimensional social space. We combine traditional video sharing with spatial creativity (Socio-Spaces), high-energy discovery feeds (Prism), and immersive viewing modes (Cinema) to give you total control over how you consume and create content."
   },
   {
-    question: "How do I start uploading videos?",
-    answer: "Uploading is simple! Once you create an account and log in, navigate to the 'Videos' section and click on the 'Upload Video' button. You can provide a title, description, and custom thumbnail to make your content stand out."
+    question: "What are Socio-Spaces?",
+    answer: "Socio-Spaces are infinite, collaborative canvases where you can drag and drop videos, tweets, and notes. Connect them to create visual playlists, meaningful clusters, or just a messy mood board. It's spatial organization for your digital life, breaking free from linear feeds."
   },
   {
-    question: "Can I organize videos into playlists?",
-    answer: "Absolutely. You can create unlimited playlists to curate your favorite content. You have full control over your playlists, with options to keep them public for everyone to see or private for your personal collection."
+    question: "What is Magic Layout?",
+    answer: "Staring at a blank canvas? Magic Layout instantly generates a themed environment for you—complete with mood lighting, background visuals, and curated videos—with just a single click. It's the perfect starting point for your creative space."
   },
   {
-    question: "How do I interact with other users?",
-    answer: "Engagement is at the core of Socioverse. You can subscribe to channels, like and comment on videos, and even use our Tweet system to share short updates or thoughts with your followers."
+    question: "Can I watch videos with friends?",
+    answer: "Yes! In Socio-Spaces, you can connect videos with 'Sync Cables'. When you play, pause, or seek one video, all connected videos sync up perfectly. It's great for mashups, reaction setups, or simply watching multiple angles simultaneously."
   },
   {
-    question: "What can I do in the Dashboard?",
-    answer: "The Dashboard is your personal command center. It provides analytics on your channel's performance, including subscriber counts and video metrics. You can also manage your profile settings and view your content stats here."
+    question: "What is Prism Mode?",
+    answer: "Prism is our high-octane discovery feed. It uses a vertical, swipeable interface optimized for quick browsing, keeping you on the pulse of what's trending across the Socioverse. Think of it as your rapid-fire window into the community."
+  },
+  {
+    question: "How does the Dashboard work?",
+    answer: "Your personal command center. Access it via the profile menu to track your channel's performance, manage subscriber growth, and view detailed analytics on how your content is performing across all modes."
   }
 ]
 
