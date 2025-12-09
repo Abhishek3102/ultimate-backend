@@ -159,14 +159,7 @@ export default function HomePage() {
               />
             </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-              className="text-xl md:text-2xl text-white mb-6 max-w-3xl drop-shadow-sm font-semibold"
-            >
-              Where every social world comes together.
-            </motion.p>
+
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -181,7 +174,7 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
-              className="max-w-4xl text-gray-100 text-lg mb-10 leading-relaxed font-medium drop-shadow-sm"
+              className="max-w-4xl text-gray-100 text-lg mb-10 leading-relaxed font-medium bg-white/5 backdrop-blur-md rounded-2xl p-6 md:p-8 border border-white/10 shadow-2xl relative overflow-hidden"
             >
               <p className="mb-4">
                 Welcome to Socioverse - the world where your videos, posts, playlists, messages, and interactions come together in perfect harmony.
@@ -227,7 +220,7 @@ export default function HomePage() {
               Platform Features
             </motion.h2>
 
-            <div className="flex overflow-x-auto pb-6 gap-6 max-w-7xl mx-auto snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:pb-0 no-scrollbar">
+            <div className="flex overflow-x-auto pb-6 gap-6 max-w-7xl mx-auto snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:pb-0 md:overflow-visible no-scrollbar">
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
