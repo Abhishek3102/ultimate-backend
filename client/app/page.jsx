@@ -227,7 +227,7 @@ export default function HomePage() {
               Platform Features
             </motion.h2>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            <div className="flex overflow-x-auto pb-6 gap-6 max-w-7xl mx-auto snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:pb-0 no-scrollbar">
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
@@ -239,7 +239,7 @@ export default function HomePage() {
                     rotateY: 5,
                     boxShadow: "0 25px 50px rgba(0,0,0,0.3)",
                   }}
-                  className="group cursor-pointer"
+                  className="group cursor-pointer min-w-[260px] flex-shrink-0 snap-center"
                 >
                   <Link href={feature.href}>
                     <div className="p-6 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-2xl border border-white/20 hover:border-white/40 transition-all h-full">

@@ -168,7 +168,7 @@ export default function NotificationsDropdown() {
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute right-0 mt-2 w-96 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
+                        className="fixed top-24 left-4 right-4 md:absolute md:top-full md:right-0 md:left-auto md:w-96 md:mt-2 bg-gray-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50"
                     >
                         <div className="p-4 border-b border-white/10 flex justify-between items-center">
                             <h3 className="font-bold text-white">Notifications</h3>

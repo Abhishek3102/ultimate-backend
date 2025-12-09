@@ -44,66 +44,69 @@ export default function Navbar() {
                     <span className="text-orange-400 text-sm font-medium border border-orange-400/50 px-2 py-1 rounded bg-orange-400/10">Demo Mode</span>
                 )}
 
-                <Link href="/videos">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-                    >
-                        <Video className="w-4 h-4" />
-                        <span className="hidden sm:inline">Videos</span>
-                    </motion.button>
-                </Link>
-                <Link href="/playlists">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-                    >
-                        <List className="w-4 h-4" />
-                        <span className="hidden sm:inline">Playlists</span>
-                    </motion.button>
-                </Link>
-                <Link href="/search">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-                    >
-                        <Search className="w-4 h-4" />
-                        <span className="hidden sm:inline">Search</span>
-                    </motion.button>
-                </Link>
-                <Link href="/trending">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-purple-500/50 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-                    >
-                        <TrendingUp className="w-4 h-4 text-purple-400" />
-                        <span className="hidden sm:inline">Prism</span>
-                    </motion.button>
-                </Link>
-                <Link href="/cinema">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/50 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-                    >
-                        <Video className="w-4 h-4 text-purple-400" />
-                        <span className="hidden sm:inline">Cinema</span>
-                    </motion.button>
-                </Link>
-                <Link href="/messages">
-                    <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
-                    >
-                        <MessageSquare className="w-4 h-4" />
-                        <span className="hidden sm:inline">Messages</span>
-                    </motion.button>
-                </Link>
+                {/* Desktop Navigation Links */}
+                <div className="hidden md:flex gap-4 items-center">
+                    <Link href="/videos">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <Video className="w-4 h-4" />
+                            <span className="hidden sm:inline">Videos</span>
+                        </motion.button>
+                    </Link>
+                    <Link href="/playlists">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <List className="w-4 h-4" />
+                            <span className="hidden sm:inline">Playlists</span>
+                        </motion.button>
+                    </Link>
+                    <Link href="/search">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <Search className="w-4 h-4" />
+                            <span className="hidden sm:inline">Search</span>
+                        </motion.button>
+                    </Link>
+                    <Link href="/trending">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-purple-500/50 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <TrendingUp className="w-4 h-4 text-purple-400" />
+                            <span className="hidden sm:inline">Prism</span>
+                        </motion.button>
+                    </Link>
+                    <Link href="/cinema">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/50 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <Video className="w-4 h-4 text-purple-400" />
+                            <span className="hidden sm:inline">Cinema</span>
+                        </motion.button>
+                    </Link>
+                    <Link href="/messages">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-white/10 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <MessageSquare className="w-4 h-4" />
+                            <span className="hidden sm:inline">Messages</span>
+                        </motion.button>
+                    </Link>
+                </div>
                 {isAuthenticated ? (
                     <div className="flex gap-2 items-center">
                         <NotificationsDropdown />

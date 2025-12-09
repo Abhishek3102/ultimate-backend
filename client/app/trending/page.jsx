@@ -28,8 +28,8 @@ export default function TrendingPage() {
 
     return (
         <div className="flex h-screen bg-black pt-24 overflow-hidden"> {/* Increased padding-top to pt-24 for safe area */}
-            {/* Sidebar: Trending List */}
-            <div className="w-80 border-r border-white/10 flex flex-col bg-zinc-900/50">
+            {/* Sidebar: Trending List (Desktop) */}
+            <div className="hidden md:flex w-80 border-r border-white/10 flex-col bg-zinc-900/50">
                 <div className="p-4 border-b border-white/10">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
                         <TrendingUp className="text-purple-500" /> Trending Topics
@@ -76,6 +76,22 @@ export default function TrendingPage() {
 
             {/* Main Area: Prism Feed */}
             <div className="flex-1 flex flex-col bg-gradient-to-br from-gray-900 to-black relative">
+                {/* Mobile Trending Tabs (Horizontal Scroll) */}
+                <div className="md:hidden overflow-x-auto p-4 flex gap-2 border-b border-white/10 bg-black/20 backdrop-blur-md">
+                    {Object.values(trends).flat().map((trend) => (
+                        <button
+                            key={trend._id}
+                            onClick={() => setSelectedTopic(trend._id)}
+                            className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedTopic === trend._id
+                                ? "bg-purple-600 text-white shadow-lg shadow-purple-900/20"
+                                : "bg-white/10 text-gray-400 border border-white/5"
+                                }`}
+                        >
+                            #{trend._id.replace('#', '')}
+                        </button>
+                    ))}
+                </div>
+
                 {selectedTopic ? (
                     <PrismFeed topic={selectedTopic} />
                 ) : (

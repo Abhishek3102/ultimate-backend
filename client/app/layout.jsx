@@ -17,6 +17,7 @@ import "./globals.css"
 import { AuthProvider } from "@/components/AuthProvider"
 import { SocketProvider } from "@/context/SocketContext"
 import Navbar from "@/components/Navbar"
+import MobileNav from "@/components/MobileNav"
 import ClientToaster from "@/components/ClientToaster"
 import "./globals.css"
 
@@ -28,6 +29,8 @@ export default function RootLayout({ children }) {
           <SocketProvider>
             <Navbar />
             {children}
+            <div className="h-20 md:hidden" />
+            <MobileNav />
             <ClientToaster />
           </SocketProvider>
         </AuthProvider>

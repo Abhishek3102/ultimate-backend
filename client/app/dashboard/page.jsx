@@ -297,24 +297,24 @@ function DashboardPageContent() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="flex overflow-x-auto pb-4 gap-4 snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:pb-0 mb-8 no-scrollbar"
         >
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Video className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.videos}</h3>
             <p className="text-gray-300 text-sm">Videos</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <MessageSquare className="w-8 h-8 text-green-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.tweets}</h3>
             <p className="text-gray-300 text-sm">Tweets</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Heart className="w-8 h-8 text-pink-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.likes}</h3>
             <p className="text-gray-300 text-sm">Likes Given</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <List className="w-8 h-8 text-orange-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.playlists}</h3>
             <p className="text-gray-300 text-sm">Playlists</p>
@@ -326,24 +326,24 @@ function DashboardPageContent() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="flex overflow-x-auto pb-4 gap-4 snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:pb-0 mb-8 no-scrollbar"
         >
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <UserPlus className="w-8 h-8 text-blue-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.subscribers}</h3>
             <p className="text-gray-300 text-sm">Subscribers</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Eye className="w-8 h-8 text-purple-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.subscriptions}</h3>
             <p className="text-gray-300 text-sm">Following</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <TrendingUp className="w-8 h-8 text-yellow-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.totalViews}</h3>
             <p className="text-gray-300 text-sm">Total Views</p>
           </div>
-          <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
+          <div className="min-w-[200px] flex-shrink-0 snap-center bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center">
             <Heart className="w-8 h-8 text-red-400 mx-auto mb-2" />
             <h3 className="text-2xl font-bold text-white mb-1">{stats.totalLikes}</h3>
             <p className="text-gray-300 text-sm">Total Likes</p>
@@ -355,23 +355,23 @@ function DashboardPageContent() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.3 }}
-          className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl mb-8"
+          className="bg-white/10 backdrop-blur-lg rounded-2xl md:rounded-3xl p-4 md:p-8 border border-white/20 shadow-2xl mb-8"
         >
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-              <User className="w-8 h-8 text-purple-400" />
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 md:mb-8 gap-4 md:gap-0">
+            <h3 className="text-xl md:text-2xl font-bold text-white flex items-center gap-2 md:gap-3">
+              <User className="w-6 h-6 md:w-8 md:h-8 text-purple-400" />
               Profile Information
             </h3>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto">
               <button
                 onClick={handlePrivacyToggle}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all ${isPrivate
+                className={`flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 rounded-full text-sm md:text-base font-medium transition-all ${isPrivate
                   ? "bg-purple-500/20 text-purple-300 border border-purple-500/30"
                   : "bg-white/10 text-gray-300 border border-white/20"
                   }`}
               >
-                {isPrivate ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                {isPrivate ? <Lock className="w-3 h-3 md:w-4 md:h-4" /> : <Unlock className="w-3 h-3 md:w-4 md:h-4" />}
                 {isPrivate ? "Private" : "Public"}
               </button>
               <AnimatePresence mode="wait">
@@ -384,9 +384,9 @@ function DashboardPageContent() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-full font-medium flex items-center gap-2 hover:bg-purple-500/30 transition-all border border-purple-500/30"
+                    className="px-3 py-1.5 md:px-4 md:py-2 bg-purple-500/20 text-purple-300 rounded-full text-sm md:text-base font-medium flex items-center gap-2 hover:bg-purple-500/30 transition-all border border-purple-500/30"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3 h-3 md:w-4 md:h-4" />
                     Edit
                   </motion.button>
                 ) : (
@@ -399,9 +399,9 @@ function DashboardPageContent() {
                       whileTap={{ scale: 0.95 }}
                       onClick={handleSaveProfile}
                       disabled={loading}
-                      className="px-4 py-2 bg-green-500/20 text-green-300 rounded-full font-medium flex items-center gap-2 hover:bg-green-500/30 transition-all border border-green-500/30 disabled:opacity-50"
+                      className="px-3 py-1.5 md:px-4 md:py-2 bg-green-500/20 text-green-300 rounded-full text-sm md:text-base font-medium flex items-center gap-2 hover:bg-green-500/30 transition-all border border-green-500/30 disabled:opacity-50"
                     >
-                      <Save className="w-4 h-4" />
+                      <Save className="w-3 h-3 md:w-4 md:h-4" />
                       {loading ? "Saving..." : "Save"}
                     </motion.button>
                     <motion.button
@@ -417,9 +417,9 @@ function DashboardPageContent() {
                           fullName: user.fullName || "",
                         })
                       }}
-                      className="px-4 py-2 bg-red-500/20 text-red-300 rounded-full font-medium flex items-center gap-2 hover:bg-red-500/30 transition-all border border-red-500/30"
+                      className="px-3 py-1.5 md:px-4 md:py-2 bg-red-500/20 text-red-300 rounded-full text-sm md:text-base font-medium flex items-center gap-2 hover:bg-red-500/30 transition-all border border-red-500/30"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-3 h-3 md:w-4 md:h-4" />
                       Cancel
                     </motion.button>
                   </div>
@@ -428,10 +428,10 @@ function DashboardPageContent() {
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
-              <label className="text-gray-300 font-medium flex items-center gap-2">
-                <User className="w-4 h-4" />
+          <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+            <motion.div whileHover={{ scale: 1.01 }} className="space-y-1.5 md:space-y-2">
+              <label className="text-gray-300 font-medium text-sm md:text-base flex items-center gap-2">
+                <User className="w-3 h-3 md:w-4 md:h-4" />
                 Full Name
               </label>
               {isEditing ? (
@@ -439,18 +439,18 @@ function DashboardPageContent() {
                   type="text"
                   value={editData.fullName}
                   onChange={(e) => setEditData((prev) => ({ ...prev, fullName: e.target.value }))}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all"
+                  className="w-full px-3 py-2 md:px-4 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white text-sm md:text-base placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all"
                 />
               ) : (
-                <div className="px-4 py-3 bg-white/5 rounded-xl text-white border border-white/10">
+                <div className="px-3 py-2 md:px-4 md:py-3 bg-white/5 rounded-lg md:rounded-xl text-white text-sm md:text-base border border-white/10">
                   {user.fullName || "Not set"}
                 </div>
               )}
             </motion.div>
 
-            <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
-              <label className="text-gray-300 font-medium flex items-center gap-2">
-                <User className="w-4 h-4" />
+            <motion.div whileHover={{ scale: 1.01 }} className="space-y-1.5 md:space-y-2">
+              <label className="text-gray-300 font-medium text-sm md:text-base flex items-center gap-2">
+                <User className="w-3 h-3 md:w-4 md:h-4" />
                 Username
               </label>
               {isEditing ? (
@@ -458,21 +458,19 @@ function DashboardPageContent() {
                   type="text"
                   value={editData.username}
                   onChange={(e) => setEditData((prev) => ({ ...prev, username: e.target.value }))}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all"
+                  className="w-full px-3 py-2 md:px-4 md:py-3 bg-white/10 border border-white/20 rounded-lg md:rounded-xl text-white text-sm md:text-base placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all"
                 />
               ) : (
-                <div className="px-4 py-3 bg-white/5 rounded-xl text-white border border-white/10">{user.username}</div>
+                <div className="px-3 py-2 md:px-4 md:py-3 bg-white/5 rounded-lg md:rounded-xl text-white text-sm md:text-base border border-white/10">{user.username}</div>
               )}
             </motion.div>
 
-
-
-            <motion.div whileHover={{ scale: 1.02 }} className="space-y-2">
-              <label className="text-gray-300 font-medium flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+            <motion.div whileHover={{ scale: 1.01 }} className="space-y-1.5 md:space-y-2">
+              <label className="text-gray-300 font-medium text-sm md:text-base flex items-center gap-2">
+                <Calendar className="w-3 h-3 md:w-4 md:h-4" />
                 Member Since
               </label>
-              <div className="px-4 py-3 bg-white/5 rounded-xl text-white border border-white/10">
+              <div className="px-3 py-2 md:px-4 md:py-3 bg-white/5 rounded-lg md:rounded-xl text-white text-sm md:text-base border border-white/10">
                 {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Recently"}
               </div>
             </motion.div>
@@ -539,12 +537,12 @@ function DashboardPageContent() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="flex overflow-x-auto pb-4 gap-6 snap-x md:grid md:grid-cols-2 lg:grid-cols-4 md:pb-0 no-scrollbar"
         >
           <Link href="/videos">
             <motion.div
               whileHover={{ scale: 1.05, rotateY: 5 }}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-red-400/40 transition-all"
+              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-red-400/40 transition-all min-w-[200px] flex-shrink-0 snap-center"
             >
               <Video className="w-12 h-12 text-red-400 mx-auto mb-4" />
               <h4 className="text-white font-semibold mb-2">Manage Videos</h4>
@@ -555,7 +553,7 @@ function DashboardPageContent() {
           <Link href="/tweets">
             <motion.div
               whileHover={{ scale: 1.05, rotateY: 5 }}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-green-400/40 transition-all"
+              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-green-400/40 transition-all min-w-[200px] flex-shrink-0 snap-center"
             >
               <MessageSquare className="w-12 h-12 text-green-400 mx-auto mb-4" />
               <h4 className="text-white font-semibold mb-2">Your Tweets</h4>
@@ -566,7 +564,7 @@ function DashboardPageContent() {
           <Link href="/playlists">
             <motion.div
               whileHover={{ scale: 1.05, rotateY: 5 }}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-orange-400/40 transition-all"
+              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-orange-400/40 transition-all min-w-[200px] flex-shrink-0 snap-center"
             >
               <List className="w-12 h-12 text-orange-400 mx-auto mb-4" />
               <h4 className="text-white font-semibold mb-2">Playlists</h4>
@@ -577,7 +575,7 @@ function DashboardPageContent() {
           <Link href="/subscriptions">
             <motion.div
               whileHover={{ scale: 1.05, rotateY: 5 }}
-              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-purple-400/40 transition-all"
+              className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 text-center cursor-pointer hover:border-purple-400/40 transition-all min-w-[200px] flex-shrink-0 snap-center"
             >
               <UserPlus className="w-12 h-12 text-purple-400 mx-auto mb-4" />
               <h4 className="text-white font-semibold mb-2">Subscriptions</h4>
