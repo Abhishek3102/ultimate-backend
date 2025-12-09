@@ -612,7 +612,30 @@
 //     }
 //   }
 
-//   // Health check
+//   // Space endpoints
+//   async createSpace(data) {
+//     return this.request("/spaces", {
+//       method: "POST",
+//       body: JSON.stringify(data),
+//     });
+//   }
+
+//   async getSpaceById(spaceId) {
+//     return this.request(`/spaces/${spaceId}`);
+//   }
+
+//   async updateSpaceState(spaceId, data) {
+//     return this.request(`/spaces/${spaceId}/state`, {
+//       method: "PATCH",
+//       body: JSON.stringify(data),
+//     });
+//   }
+
+//   async getUserSpaces() {
+//     return this.request("/spaces/u/current-user");
+//   }
+
+  // Health check
 //   async healthCheck() {
 //     try {
 //       return await this.request("/healthcheck");
@@ -1126,6 +1149,15 @@ class ApiClient {
     });
   }
 
+  async getVideoById(videoId) {
+    try {
+      return this.request(`/videos/${videoId}`);
+    } catch (error) {
+      console.error("Get video by id error:", error);
+      return { data: null };
+    }
+  }
+
   // Tweet endpoints
   async getTweets() {
     return this.request("/tweets");
@@ -1329,6 +1361,29 @@ class ApiClient {
       }
   }
 
+  // Space endpoints
+  async createSpace(data) {
+    return this.request("/spaces", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSpaceById(spaceId) {
+    return this.request(`/spaces/${spaceId}`);
+  }
+
+  async updateSpaceState(spaceId, data) {
+    return this.request(`/spaces/${spaceId}/state`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getUserSpaces() {
+    return this.request("/spaces/u/current-user");
+  }
+
   // Health check
   async healthCheck() {
     return this.request("/healthcheck");
@@ -1365,6 +1420,14 @@ class ApiClient {
       console.error("Get prism feed error:", error);
       return { data: { pro: [], anti: [], neutral: [] } };
     }
+  }
+
+  // AI endpoints
+  async summarizeText(text) {
+    return this.request("/ai/summarize", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
   }
 
   async getUserConversations() {

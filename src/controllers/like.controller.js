@@ -137,9 +137,36 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     }
 })
 
+const getLikedTweets = asyncHandler(async (req, res) => {
+    const userId = req.user._id;
+
+    if (!isValidObjectId(userId)) {
+        throw new ApiError(400, "Invalid user ID");
+    }
+
+    try {
+        const allLikedTweets = await Like.find({likedBy : userId, tweet: {$exists: true}})
+        .populate("tweet", "content owner createdAt")
+        .select("tweet createdAt");
+    
+        if (!allLikedTweets.length){
+            return res.status(200).json(
+                new ApiResponse(200, [], "No liked tweets found")
+            );
+        }
+    
+        return res.status(200).json(
+            new ApiResponse(200, allLikedTweets, "Liked tweets fetched successfully")
+        );
+    } catch (error) {
+       throw new ApiError(500, null, "Error fetching liked tweets");
+    }
+})
+
 export {
     toggleCommentLike,
     toggleTweetLike,
     toggleVideoLike,
-    getLikedVideos
+    getLikedVideos,
+    getLikedTweets
 }

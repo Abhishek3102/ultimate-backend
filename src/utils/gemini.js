@@ -63,6 +63,42 @@ export const generateEmbedding = async (text) => {
     return Array.from({ length: 768 }, () => Math.random() - 0.5);
 };
 
+export const generateText = async (prompt) => {
+    const keys = getKeys();
+    
+    if (keys.length === 0) {
+        return "AI features unavailable: No API keys configured.";
+    }
+
+    // Try rotating through keys
+    for (let attempt = 0; attempt < keys.length; attempt++) {
+        const actualIndex = (currentKeyIndex + attempt) % keys.length;
+        const key = keys[actualIndex];
+
+        try {
+            const genAI = new GoogleGenerativeAI(key);
+            const model = genAI.getGenerativeModel({ model: "gemini-flash-lite-latest" });
+            
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            
+            currentKeyIndex = actualIndex;
+            return response.text();
+
+        } catch (error) {
+            console.error(`Gemini Text Error (Key ...${key.slice(-4)}):`, error.message);
+            
+            const isQuotaError = error.message.includes("429") || 
+                                 error.message.includes("Quota") ||
+                                 error.message.includes("Too Many Requests");
+
+            if (isQuotaError) continue;
+        }
+    }
+    
+    return "Failed to generate content: Services busy.";
+};
+
 // Cosine Similarity Function
 export const calculateSimilarity = (vecA, vecB) => {
     if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
