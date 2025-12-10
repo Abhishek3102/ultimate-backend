@@ -9,6 +9,11 @@ const tweetSchema = new Schema({
         type: Schema.Types.ObjectId,
         ref: "User"
     },
+    images: [
+        {
+            type: String // URL from Cloudinary
+        }
+    ],
     hashtags: [String],
     prism_data: {
         sentiment: {

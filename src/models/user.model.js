@@ -38,6 +38,24 @@ const userSchema = new Schema(
                 ref: "Video"
             }
         ],
+        certificates: [
+            {
+                name: String,
+                challengeId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Challenge"
+                },
+                entryId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "ArenaEntry"
+                },
+                rank: Number, // 1, 2, 3
+                date: {
+                    type: Date,
+                    default: Date.now
+                }
+            }
+        ],
         password: {
             type: String,
             required: [true, 'Password is required']
@@ -56,6 +74,11 @@ const userSchema = new Schema(
         lastActive: {
             type: Date,
             default: Date.now
+        },
+        role: {
+            type: String,
+            enum: ["user", "admin"],
+            default: "user"
         }
 
     },
