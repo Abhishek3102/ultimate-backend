@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Video, List, Settings, Search, MessageSquare, TrendingUp } from "lucide-react"
+import { Video, List, Settings, Search, MessageSquare, TrendingUp, Trophy } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useAuth } from "@/components/AuthProvider"
@@ -46,6 +46,16 @@ export default function Navbar() {
 
                 {/* Desktop Navigation Links */}
                 <div className="hidden md:flex gap-4 items-center">
+                    <Link href="/arena">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-4 py-2 bg-gradient-to-r from-red-600/30 to-orange-600/30 border border-orange-500/50 text-white rounded-full font-medium hover:bg-white/20 transition-all flex items-center gap-2"
+                        >
+                            <Trophy className="w-4 h-4 text-orange-400" />
+                            <span className="hidden sm:inline">Arena</span>
+                        </motion.button>
+                    </Link>
                     <Link href="/cinema">
                         <motion.button
                             whileHover={{ scale: 1.05 }}

@@ -36,6 +36,7 @@ import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 const isValidObjectId = mongoose.isValidObjectId;
 
@@ -120,10 +121,18 @@ const createTweet = asyncHandler(async (req, res) => {
   const hashtags = content.match(/#[a-z0-9_\-]+/gi) || [];
 
   // Create tweet in DB with owner as the logged-in user
+  let imageUrls = [];
+  if (req.files && req.files.images && req.files.images.length > 0) {
+      const uploadPromises = req.files.images.map(file => uploadOnCloudinary(file.path));
+      const results = await Promise.all(uploadPromises);
+      imageUrls = results.map(res => res.url);
+  }
+
   const tweet = await Tweet.create({
     content,
     owner: req.user._id,
-    hashtags
+    hashtags,
+    images: imageUrls
   });
 
   return res.status(201).json(

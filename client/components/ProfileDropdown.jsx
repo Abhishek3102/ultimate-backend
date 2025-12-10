@@ -60,10 +60,10 @@ export default function ProfileDropdown() {
                         </div>
 
                         <div className="p-1">
-                            <Link href="/dashboard">
+                            <Link href={user.role === 'admin' ? "/admin" : "/dashboard"}>
                                 <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-white/10 hover:text-white rounded-lg transition-colors">
                                     <LayoutDashboard className="w-4 h-4" />
-                                    Dashboard
+                                    {user.role === 'admin' ? 'Admin Panel' : 'Dashboard'}
                                 </button>
                             </Link>
                         </div>

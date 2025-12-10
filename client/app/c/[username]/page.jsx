@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { User, Video, List, MessageSquare, Lock, UserPlus, UserCheck, UserX, Heart, Play, Eye, Clock, Share, ArrowLeft, Send, Check, X } from "lucide-react"
+import { User, Video, List, MessageSquare, Lock, UserPlus, UserCheck, UserX, Heart, Play, Eye, Clock, Share, ArrowLeft, Send, Check, X, Trophy } from "lucide-react"
+import TrophyRoom from "@/components/arena/TrophyRoom"
 import { api } from "@/lib/api"
 import { useAuth } from "@/components/AuthProvider"
 import toast from "react-hot-toast"
@@ -312,35 +313,44 @@ export default function ChannelProfile() {
                     </div>
 
                     <div className="flex flex-wrap justify-center md:justify-end items-center gap-3 mb-4">
-                        {renderFollowButton()}
-
-                        {/* Message Button */}
-                        {!isOwner && (
-                            <Link
-                                href={`/messages/${profile._id}`}
-                                className="flex items-center gap-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-full font-medium transition-colors"
-                            >
-                                <MessageSquare className="w-4 h-4" />
-                                Message
-                            </Link>
-                        )}
-
-                        {/* Status Message for Incoming Request */}
-                        {profile.isFollowingMeStatus === 'pending' && (
-                            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 duration-300">
-                                <button
-                                    onClick={() => handleRespond('accept')}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50 rounded-full text-sm font-medium transition-all"
-                                >
-                                    <Check className="w-4 h-4" /> Accept
-                                </button>
-                                <button
-                                    onClick={() => handleRespond('reject')}
-                                    className="flex items-center gap-1.5 px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50 rounded-full text-sm font-medium transition-all"
-                                >
-                                    <X className="w-4 h-4" /> Reject
-                                </button>
+                        {/* Admin Privacy Check */}
+                        {profile.role === 'admin' && currentUser?.role !== 'admin' ? (
+                            <div className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-400 rounded-full text-sm font-medium flex items-center gap-2 cursor-not-allowed">
+                                <Lock className="w-4 h-4" /> Checks & Balances Active
                             </div>
+                        ) : (
+                            <>
+                                {renderFollowButton()}
+
+                                {/* Message Button */}
+                                {!isOwner && (
+                                    <Link
+                                        href={`/messages/${profile._id}`}
+                                        className="flex items-center gap-2 px-6 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-full font-medium transition-colors"
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                        Message
+                                    </Link>
+                                )}
+
+                                {/* Status Message for Incoming Request */}
+                                {profile.isFollowingMeStatus === 'pending' && (
+                                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 duration-300">
+                                        <button
+                                            onClick={() => handleRespond('accept')}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50 rounded-full text-sm font-medium transition-all"
+                                        >
+                                            <Check className="w-4 h-4" /> Accept
+                                        </button>
+                                        <button
+                                            onClick={() => handleRespond('reject')}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50 rounded-full text-sm font-medium transition-all"
+                                        >
+                                            <X className="w-4 h-4" /> Reject
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>
@@ -389,6 +399,17 @@ export default function ChannelProfile() {
                             >
                                 <div className="flex items-center gap-2">
                                     <List className="w-4 h-4" /> Playlists
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab("arena")}
+                                className={`px-6 py-3 font-medium text-sm whitespace-nowrap transition-colors border-b-2 ${activeTab === "arena"
+                                    ? "text-purple-400 border-purple-400"
+                                    : "text-gray-400 border-transparent hover:text-white"
+                                    }`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <Trophy className="w-4 h-4" /> Trophy Room
                                 </div>
                             </button>
                         </div>
@@ -517,6 +538,11 @@ export default function ChannelProfile() {
                                     </div>
                                 )}
                             </div>
+                        )}
+
+                        {/* Trophy Room Tab (Arena) */}
+                        {activeTab === "arena" && (
+                            <TrophyRoom userId={profile._id} />
                         )}
                     </div>
                 )}
@@ -655,3 +681,5 @@ export default function ChannelProfile() {
         </div>
     )
 }
+
+

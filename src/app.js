@@ -52,6 +52,8 @@ import theaterRouter from "./routes/theater.routes.js";
 import prismRouter from "./routes/prism.routes.js";
 import spaceRouter from "./routes/space.routes.js";
 import aiRouter from "./routes/ai.routes.js";
+import arenaRouter from "./routes/arena.routes.js";
+import adminRouter from "./routes/admin.routes.js";
 
 //routes declaration
 app.use("/api/v1/healthcheck", healthcheckRouter);
@@ -68,9 +70,10 @@ app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/conversations", conversationRouter);
 app.use("/api/v1/theater", theaterRouter);
 app.use("/api/v1/prism", prismRouter);
-app.use("/api/v1/prism", prismRouter);
 app.use("/api/v1/spaces", spaceRouter);
 app.use("/api/v1/ai", aiRouter);
+app.use("/api/v1/arena", arenaRouter);
+app.use("/api/v1/admin", adminRouter);
 
 // http://localhost:8000/api/v1/users/register
 
