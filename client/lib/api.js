@@ -1,102 +1,4 @@
-// "use client";
 
-// const API_BASE_URL =
-//   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-
-// class ApiClient {
-//   constructor() {
-//     this.baseURL = API_BASE_URL;
-//     this.isBackendAvailable = null; // Track backend availability
-//   }
-
-//   getAuthHeaders() {
-//     const token =
-//       typeof window !== "undefined"
-//         ? localStorage.getItem("accessToken")
-//         : null;
-//     return {
-//       Authorization: token ? `Bearer ${token}` : "",
-//     };
-//   }
-
-//   async checkBackendAvailability() {
-//     try {
-//       const response = await fetch(`${this.baseURL}/healthcheck`, {
-//         method: "GET",
-//         timeout: 5000, // 5 second timeout
-//       });
-//       this.isBackendAvailable = response.ok;
-//       return this.isBackendAvailable;
-//     } catch (error) {
-//       console.log("Backend not available, using mock mode");
-//       this.isBackendAvailable = false;
-//       return false;
-//     }
-//   }
-
-//   async request(endpoint, options = {}) {
-//     // Check if backend is available first
-//     if (this.isBackendAvailable === null) {
-//       await this.checkBackendAvailability();
-//     }
-
-//     // If backend is not available, return mock data or throw appropriate error
-//     if (!this.isBackendAvailable) {
-//       return this.handleOfflineMode(endpoint, options);
-//     }
-
-//     const url = `${this.baseURL}${endpoint}`;
-//     const config = {
-//       credentials: "include",
-//       headers: {
-//         ...this.getAuthHeaders(),
-//         ...options.headers,
-//       },
-//       ...options,
-//     };
-
-//     // Don't set Content-Type for FormData
-//     if (
-//       !(options.body instanceof FormData) &&
-//       !options.headers?.["Content-Type"]
-//     ) {
-//       config.headers["Content-Type"] = "application/json";
-//     }
-
-//     try {
-//       const response = await fetch(url, config);
-
-//       // Handle 401 only if we have a token to refresh
-//       if (response.status === 401 && localStorage.getItem("accessToken")) {
-//         const refreshed = await this.refreshToken();
-//         if (refreshed) {
-//           // Retry the original request
-//           config.headers = {
-//             ...config.headers,
-//             ...this.getAuthHeaders(),
-//           };
-//           const retryResponse = await fetch(url, config);
-//           return await this.handleResponse(retryResponse);
-//         } else {
-//           // Only logout if refresh failed
-//           this.clearAuth();
-//           throw new Error("Session expired. Please login again.");
-//         }
-//       }
-
-//       return await this.handleResponse(response);
-//     } catch (error) {
-//       console.error("API request failed:", error);
-
-//       // If it's a network error, mark backend as unavailable and try offline mode
-//       if (error.name === "TypeError" && error.message.includes("fetch")) {
-//         this.isBackendAvailable = false;
-//         return this.handleOfflineMode(endpoint, options);
-//       }
-
-//       throw error;
-//     }
-//   }
 
 //   handleOfflineMode(endpoint, options) {
 //     console.log(`Offline mode: ${options.method || "GET"} ${endpoint}`);
@@ -398,6 +300,16 @@
 //       console.error("Logout API error:", error);
 //     } finally {
 //       this.clearAuth();
+//     }
+//   }
+
+//   async checkBackendAvailability() {
+//     try {
+//       const response = await fetch(`${this.baseURL}/health-check`);
+//       return response.ok;
+//     } catch (error) {
+//       console.error("Backend availability check failed:", error);
+//       return false;
 //     }
 //   }
 
@@ -779,9 +691,44 @@ class ApiClient {
         return this.mockUsers(endpoint, options);
       case endpoint === "/healthcheck":
         return this.mockHealthCheck();
+      case endpoint === "/arena/challenges":
+        return this.mockArenaChallenges();
+      case endpoint.includes("/arena/challenge/"):
+        // Handle details or leaderboard
+        if (endpoint.includes("/leaderboard")) return { data: [] };
+        return { data: null };
       default:
         return Promise.resolve({ data: [] });
     }
+  }
+
+  mockArenaChallenges() {
+    return Promise.resolve({
+      data: [
+        {
+          _id: "mock_challenge_1",
+          title: "Creative Writing Contest [OFFLINE DEMO]",
+          description: "Write a short story about a time traveler.",
+          type: "text",
+          status: "active",
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 86400000).toISOString(), // +1 day
+          prizes: { first: "Gold Badge", second: "Silver Badge", third: "Bronze Badge" },
+          createdBy: { _id: "mock_admin", username: "admin", fullName: "Admin" }
+        },
+        {
+          _id: "mock_challenge_2",
+          title: "Best Nature Photo [OFFLINE DEMO]",
+          description: "Upload your best nature shot.",
+          type: "image",
+          status: "active",
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 172800000).toISOString(), // +2 days
+          prizes: { first: "Pro Camera", second: "Lens Kit", third: "Tripod" },
+          createdBy: { _id: "mock_admin", username: "admin", fullName: "Admin" }
+        }
+      ]
+    });
   }
 
   mockLogin(options) {
@@ -1171,7 +1118,20 @@ class ApiClient {
     return this.request(`/tweets/${tweetId}`);
   }
 
-  async createTweet(content) {
+  async createTweet(content, images = []) {
+    // If images present, send as FormData
+    if (images.length > 0) {
+        const formData = new FormData();
+        formData.append("content", content);
+        images.forEach(img => formData.append("images", img));
+        return this.request("/tweets", {
+            method: "POST",
+            body: formData,
+            // Header 'Content-Type': 'multipart/form-data' handled auto by browser with FormData
+        });
+    }
+
+    // Default JSON
     return this.request("/tweets", {
       method: "POST",
       body: JSON.stringify({ content }),
@@ -1348,43 +1308,57 @@ class ApiClient {
   }
 
   async getTheater(roomId) {
+    return this.request(`/users/${userId}`);
+  }
+
+  // Cinema endpoints
+  async getTheater(roomId) {
     return this.request(`/theater/${roomId}`);
   }
 
-  // Notification endpoints
-  async getNotifications() {
-      try {
-          return await this.request("/notifications");
-      } catch (error) {
-          console.error("Get notifications error:", error);
-          return { data: [] };
-      }
+  async createTheater(videoId) {
+      return this.request("/theater", {
+          method: "POST",
+          body: JSON.stringify({ videoId })
+      });
   }
 
-  // Space endpoints
-  async createSpace(data) {
-    return this.request("/spaces", {
+  // --- Arena Endpoints ---
+  async getChallenges() {
+    try {
+      return await this.request("/arena/challenges");
+    } catch (error) {
+      console.error("Get challenges error:", error);
+      return { data: [] };
+    }
+  }
+
+  async getChallengeDetails(id) {
+    return this.request(`/arena/challenge/${id}`);
+  }
+
+  async getLeaderboard(id) {
+    return this.request(`/arena/challenge/${id}/leaderboard`);
+  }
+
+  async getArenaEntry(id) {
+    return this.request(`/arena/entry/${id}`);
+  }
+
+  async enterChallenge(id, data) {
+    return this.request(`/arena/enter/${id}`, {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(data)
     });
   }
 
-  async getSpaceById(spaceId) {
-    return this.request(`/spaces/${spaceId}`);
-  }
-
-  async updateSpaceState(spaceId, data) {
-    return this.request(`/spaces/${spaceId}/state`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
+  async voteEntry(entryId) {
+    return this.request(`/arena/vote/${entryId}`, {
+      method: "POST"
     });
   }
 
-  async getUserSpaces() {
-    return this.request("/spaces/u/current-user");
-  }
-
-  // Health check
+  // Dashboard endpointsh check
   async healthCheck() {
     return this.request("/healthcheck");
   }
@@ -1430,8 +1404,111 @@ class ApiClient {
     });
   }
 
+  async getNotifications() {
+    return this.request("/notifications");
+  }
+
+  async markNotificationRead(id) {
+    return this.request(`/notifications/${id}/read`, { method: "PATCH" });
+  }
+
+  async markAllNotificationsRead() {
+    return this.request("/notifications/read-all", { method: "PATCH" });
+  }
+
   async getUserConversations() {
     return this.request("/conversations");
+  }
+
+  // --- Arena Methods ---
+  async getChallenges() {
+    try {
+      const response = await this.request("/arena/challenges");
+      if (!response.data || response.data.length === 0) {
+        console.warn("Backend returned empty list. Showing [OFFLINE DEMO] data.");
+        return this.mockArenaChallenges();
+      }
+      return response;
+    } catch (error) {
+      console.warn("Arena API failed, falling back to demo mode:", error);
+      return this.mockArenaChallenges();
+    }
+  }
+
+  async getUserTrophies(userId) {
+    try {
+        return await this.request(`/arena/user/${userId}/trophies`);
+    } catch(error) {
+        console.error("Get trophies error", error);
+        return { data: [] };
+    }
+  }
+
+  async getChallengeDetails(id) {
+    if (id?.toString().startsWith("mock_")) {
+      return this.mockChallengeDetails(id);
+    }
+    return this.request(`/arena/challenge/${id}`);
+  }
+
+  async getLeaderboard(challengeId) {
+    if (challengeId?.toString().startsWith("mock_")) {
+       return { data: [] }; // Empty leaderboard for demo
+    }
+    return this.request(`/arena/challenge/${challengeId}/leaderboard`);
+  }
+
+  async enterChallenge(challengeId, data) {
+    if (challengeId?.toString().startsWith("mock_")) {
+       return { data: { message: "Entered demo challenge successfully!" } };
+    }
+    return this.request(`/arena/enter/${challengeId}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async voteEntry(entryId) {
+    if (entryId?.toString().startsWith("mock_")) {
+        return { data: { message: "Voted successfully (Demo)" } };
+    }
+    return this.request(`/arena/vote/${entryId}`, {
+      method: "POST",
+    });
+  }
+
+  async getArenaEntry(entryId) {
+    if (entryId?.toString().startsWith("mock_")) {
+        return { data: null };
+    }
+    return this.request(`/arena/entry/${entryId}`);
+  }
+
+  async createChallenge(data) {
+    return this.request("/admin/arena/create", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // --- Mock Helpers ---
+  mockChallengeDetails(id) {
+    // Return the same data as the list, but maybe with more info if needed
+    const mocks = this.mockArenaChallenges().then(res => res.data); // accessing the promise from earlier
+    // For simplicity, just return a static object matching the ID
+    return Promise.resolve({
+        data: {
+          _id: id,
+          title: id === "mock_challenge_1" ? "Creative Writing Contest [OFFLINE DEMO]" : "Best Nature Photo [OFFLINE DEMO]",
+          description: "This is a detailed description for the offline demo challenge. You can't actually win real prizes here, but you can test the UI.",
+          type: id === "mock_challenge_1" ? "text" : "image",
+          status: "active",
+          startDate: new Date().toISOString(),
+          endDate: new Date(Date.now() + 86400000).toISOString(),
+          prizes: { first: "Gold Badge", second: "Silver Badge", third: "Bronze Badge" },
+          createdBy: { _id: "mock_admin", username: "admin", fullName: "Admin" }
+        }
+    });
   }
 }
 

@@ -107,7 +107,8 @@ const loginUser = asyncHandler(async (req, res) =>{
     //send cookie
 
     const {email, username, password} = req.body
-    console.log(email);
+    console.log("LOGIN ATTEMPT:", { email, username, hasPassword: !!password });
+
 
     if (!username && !email) {
         throw new ApiError(400, "username or email is required")
@@ -119,11 +120,18 @@ const loginUser = asyncHandler(async (req, res) =>{
         
     // }
 
+    // Construct query dynamically to avoid passing { username: undefined } which can fail in Mongoose
+    const queryCriteria = [];
+    if (username) queryCriteria.push({ username });
+    if (email) queryCriteria.push({ email });
+
     const user = await User.findOne({
-        $or: [{username}, {email}]
+        $or: queryCriteria
     })
 
     if (!user) {
+        // Debug log to keep if it still fails
+        console.log("User not found for criteria:", queryCriteria);
         throw new ApiError(404, "User does not exist")
     }
 
@@ -419,7 +427,9 @@ const getAllUsers = asyncHandler(async(req, res) => {
                 subscribersCount: 1,
                 videosCount: 1,
                 createdAt: 1,
-                isPrivate: 1
+                createdAt: 1,
+                isPrivate: 1,
+                role: 1
             }
         },
         { $sort: { createdAt: -1 } }
@@ -535,7 +545,9 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
                 avatar: 1,
                 coverImage: 1,
                 email: 1,
-                isPrivate: 1
+                isPrivate: 1,
+                role: 1,
+                certificates: 1
 
             }
         }

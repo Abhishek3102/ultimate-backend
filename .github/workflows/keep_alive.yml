@@ -1,0 +1,18 @@
+name: Keep Alive & Arena Scheduler
+
+on:
+  schedule:
+    - cron: '*/14 * * * *' # Run every 14 minutes
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping_server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Arena Scheduler
+        run: |
+          # Replace with your actual Render URL
+          curl -X GET https://chai-backend-main.onrender.com/api/v1/arena/challenges \
+          -H "Content-Type: application/json"
+          
+          echo "Ping sent to keep server awake and check arena expiry."
