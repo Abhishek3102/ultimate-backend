@@ -324,7 +324,7 @@ function TweetsPageContent() {
             <form onSubmit={handleTweet} className="space-y-4">
               <div className="flex gap-4">
                 <img
-                  src={user?.avatar || "/placeholder.svg?height=48&width=48"}
+                  src={(user?.avatar || "/placeholder.svg?height=48&width=48").replace('http://', 'https://')}
                   alt={user?.username}
                   className="w-12 h-12 rounded-full object-cover"
                 />
@@ -398,7 +398,7 @@ function TweetsPageContent() {
               >
                 <div className="flex gap-4">
                   <img
-                    src={tweet.owner?.avatar || "/placeholder.svg"}
+                    src={(tweet.owner?.avatar || "/placeholder.svg").replace('http://', 'https://')}
                     alt={tweet.owner?.username}
                     className="w-12 h-12 rounded-full object-cover"
                   />
@@ -408,7 +408,7 @@ function TweetsPageContent() {
                         <h3 className="text-white font-semibold">{tweet.owner?.username}</h3>
                         <span className="text-gray-400 text-sm flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {formatTime(tweet.createdAt)}
+                          <span suppressHydrationWarning>{formatTime(tweet.createdAt)}</span>
                         </span>
                       </div>
                       {isAuthenticated && user?._id === tweet.owner?._id && (
@@ -527,7 +527,7 @@ function TweetsPageContent() {
                         {/* Reply Input */}
                         <div className="flex gap-3 mb-6">
                           <img
-                            src={user?.avatar || "/placeholder.svg?height=32&width=32"}
+                            src={(user?.avatar || "/placeholder.svg?height=32&width=32").replace('http://', 'https://')}
                             alt={user?.username}
                             className="w-8 h-8 rounded-full object-cover"
                           />
@@ -572,7 +572,7 @@ function TweetsPageContent() {
                                       alt={comment.owner?.username}
                                     />
                                     <span className="text-white font-medium text-sm">{comment.owner?.username}</span>
-                                    <span className="text-gray-500 text-xs">{formatTime(comment.createdAt)}</span>
+                                    <span className="text-gray-500 text-xs" suppressHydrationWarning>{formatTime(comment.createdAt)}</span>
                                   </div>
                                   {user?._id === comment.owner?._id && (
                                     <div className="flex gap-2">

@@ -40,7 +40,7 @@ export default function ProfileDropdown() {
                 className="relative z-10 block"
             >
                 <img
-                    src={user.avatar || "/placeholder.svg?height=40&width=40"}
+                    src={(user?.avatar || "/placeholder.svg?height=40&width=40").replace('http://', 'https://')}
                     alt={user.username}
                     className="w-10 h-10 rounded-full object-cover border-2 border-white/20 hover:border-purple-500 transition-colors"
                 />

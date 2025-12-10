@@ -44,44 +44,69 @@ const analyzeTweetWithGemini = async (content, topic) => {
     }
 };
 
+const LOCAL_CATEGORY_MAP = {
+    'sports': ['cricket', 'football', 'game', 'playtowin', 'esports', 'ipl', 'match', 'hockey', 'badminton', 'tennis', 'athlete', 'f1'],
+    'politics': ['election', 'vote', 'democracy', 'government', 'policy', 'minister', 'leader', 'congress', 'bjp', 'senate'],
+    'finance': ['money', 'wealth', 'business', 'stock', 'market', 'crypto', 'bitcoin', 'economy', 'invest', 'startup', 'entrepreneur'],
+    'tech': ['ai', 'tech', 'coding', 'software', 'programming', 'developer', 'genai', 'innovation', 'robot', 'cyber', 'web3'],
+    'health': ['health', 'fitness', 'gym', 'yoga', 'wellness', 'medicine', 'doctor', 'diet', 'nutrition'],
+    'entertainment': ['movie', 'music', 'song', 'cinema', 'celebrity', 'actor', 'hollywood', 'bollywood', 'film', 'series']
+};
+
+const getLocalCategory = (hashtag) => {
+    const lowerTag = hashtag.toLowerCase().replace('#', '').replace(/-/g, '');
+    for (const [category, keywords] of Object.entries(LOCAL_CATEGORY_MAP)) {
+        if (keywords.some(k => lowerTag.includes(k))) return category.charAt(0).toUpperCase() + category.slice(1);
+    }
+    return null;
+};
+
 const categorizeHashtagsWithGemini = async (hashtags) => {
     try {
-        if (!process.env.GEMINI_API_KEY || hashtags.length === 0) return {};
+        const results = {};
+        const tagsToAnalyze = [];
 
-        const prompt = `
-        Categorize the following hashtags into one of these exact categories: ['Tech', 'Sports', 'Finance', 'Health', 'Politics', 'Entertainment', 'Other'].
-        
-        Rules:
-        - Map competitive gaming, esports, #playtowin, #game to 'Sports'.
-        - Map movies, music, celebrities to 'Entertainment'.
-        - Map AI, coding, software to 'Tech'.
-        
-        Hashtags: ${JSON.stringify(hashtags)}
-        
-        Output valid JSON object where keys are hashtags and values are categories. 
-        Example: { "#ai": "Tech", "#football": "Sports", "#game": "Sports" }
-        `;
+        // 1. Try local mapping first
+        for (const tag of hashtags) {
+            const localCat = getLocalCategory(tag);
+            if (localCat) {
+                results[tag] = localCat;
+            } else {
+                tagsToAnalyze.push(tag);
+            }
+        }
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
-        const jsonStr = text.replace(/```json|```/g, "").trim();
-        return JSON.parse(jsonStr);
+        // 2. Use Gemini for remaining
+        if (process.env.GEMINI_API_KEY && tagsToAnalyze.length > 0) {
+            const prompt = `
+            Categorize the following hashtags into one of these exact categories: ['Tech', 'Sports', 'Finance', 'Health', 'Politics', 'Entertainment', 'Other'].
+            
+            Hashtags: ${JSON.stringify(tagsToAnalyze)}
+            
+            Output valid JSON object where keys are hashtags and values are categories. 
+            Example: { "#ai": "Tech", "#football": "Sports" }
+            `;
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+            const jsonStr = text.replace(/```json|```/g, "").trim();
+            const geminiResults = JSON.parse(jsonStr);
+            Object.assign(results, geminiResults);
+        }
+
+        return results;
     } catch (error) {
         console.error("Gemini Categorization Error:", error);
-        return {};
+        return {}; // Return what we have locally if Gemini fails
     }
 };
 
 const getTrendingTopics = asyncHandler(async (req, res) => {
-    // 1. Get raw hashtag counts from last 24h
-    const startOfDay = new Date();
-    startOfDay.setDate(startOfDay.getDate() - 1); // Last 24 hours
-
+    // 1. Get raw hashtag counts (ALL TIME - No 24h limit)
     const rawTrends = await Tweet.aggregate([
-        { $match: { createdAt: { $gte: startOfDay } } },
         { $unwind: "$hashtags" },
-        // Normalize hashtags (lowercase, remove hyphens for grouping)
+        // Normalize hashtags
         { 
             $project: { 
                 originalTag: "$hashtags", 
@@ -95,25 +120,28 @@ const getTrendingTopics = asyncHandler(async (req, res) => {
             $group: { 
                 _id: "$normalizedTag", 
                 count: { $sum: 1 }, 
-                originalTag: { $first: "$originalTag" }, // Keep one representative original tag
-                categories: { $push: "$prism_data.category" } // Collect categories
+                originalTag: { $first: "$originalTag" }, 
+                categories: { $push: "$prism_data.category" } 
             } 
         },
         { $sort: { count: -1 } },
-        { $limit: 20 }
+        { $limit: 50 } // Increased limit to ensure visibility
     ]);
 
     // 2. Determine dominant category for each trend
     let trendsWithCategory = rawTrends.map(trend => {
-        // Find most frequent category (excluding null/undefined)
         const catCounts = {};
         trend.categories.forEach(c => {
-            if (c) catCounts[c] = (catCounts[c] || 0) + 1;
+            if (c && c !== 'Other') catCounts[c] = (catCounts[c] || 0) + 1;
         });
         
-        // Sort categories by frequency
         const sortedCats = Object.entries(catCounts).sort((a,b) => b[1] - a[1]);
-        const dominantCategory = sortedCats.length > 0 ? sortedCats[0][0] : "Other";
+        // If we have a dominant known category, use it. Else check local map. Else 'Other'.
+        let dominantCategory = sortedCats.length > 0 ? sortedCats[0][0] : null;
+
+        if (!dominantCategory) {
+            dominantCategory = getLocalCategory(trend.originalTag) || "Other";
+        }
 
         return {
             _id: trend.originalTag, 
@@ -131,22 +159,27 @@ const getTrendingTopics = asyncHandler(async (req, res) => {
     if (uncategorizedTags.length > 0) {
         const newCategories = await categorizeHashtagsWithGemini(uncategorizedTags);
         
-        // Update trends list and trigger background DB update
+        // Update trends list and trigger DB update
+        const updates = [];
         trendsWithCategory = trendsWithCategory.map(trend => {
             if (trend.category === "Other" && newCategories[trend._id]) {
                 const newCat = newCategories[trend._id];
                 
-                // Fire and forget DB update to persist category
-                // We update all tweets with this hashtag to have this category
-                Tweet.updateMany(
-                    { hashtags: trend._id }, 
-                    { $set: { "prism_data.category": newCat } }
-                ).catch(err => console.error("Background category update failed", err));
+                // Queue update
+                updates.push(
+                    Tweet.updateMany(
+                        { hashtags: trend._id }, 
+                        { $set: { "prism_data.category": newCat } }
+                    )
+                );
 
                 return { ...trend, category: newCat };
             }
             return trend;
         });
+
+        // Execute DB updates in background but log errors
+        Promise.all(updates).catch(err => console.error("Background category update failed", err));
     }
 
     // 3. Group by Category
@@ -176,16 +209,13 @@ const getPrismFeed = asyncHandler(async (req, res) => {
     } else {
         // Default: Hashtag search
         // Also normalization to ensure we catch #GenAI and #genai
-        const regex = new RegExp(`^${topic.replace('#', '')}$`, 'i');
-        query = { hashtags: { $in: [new RegExp(`^${topic.replace('#', '')}$`, 'i')] } };
-        // Actually simpler: just match the string if we are storing normalized, but we store raw.
-        // Let's rely on finding by string check for now.
-        // Simpler implementation for this codebase:
-        query = { hashtags: topic }; 
+        const cleanTopic = topic.replace('#', '');
+        // Match string that optionally starts with #, followed by the topic, case insensitive
+        query = { hashtags: { $regex: new RegExp(`^#?${cleanTopic}$`, 'i') } };
     }
 
     // Find tweets
-    let tweets = await Tweet.find(query).populate("owner", "username avatar fullName");
+    let tweets = await Tweet.find(query).populate("owner", "username avatar fullName").sort({ createdAt: -1 });
 
     // If fetching by Category, we might want to analyze unanalyzed tweets in that category?
     // Generally tweets in a category ARE analyzed (since they have a category). 

@@ -85,7 +85,7 @@ export default function MessagesDashboard() {
                                     className="p-4 bg-slate-900/50 border border-white/10 rounded-2xl hover:bg-slate-800/80 transition-all cursor-pointer flex items-center gap-4 group"
                                 >
                                     <img
-                                        src={otherParticipant?.avatar || "/placeholder.svg"}
+                                        src={(otherParticipant?.avatar || "/placeholder.svg").replace('http://', 'https://')}
                                         alt={otherParticipant?.username}
                                         className="w-14 h-14 rounded-full object-cover border-2 border-transparent group-hover:border-purple-500 transition-colors"
                                     />

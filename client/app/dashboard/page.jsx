@@ -265,7 +265,7 @@ function DashboardPageContent() {
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <div className="flex items-center justify-center gap-4 mb-4">
             <img
-              src={user.avatar || "/placeholder.svg?height=80&width=80"}
+              src={(user.avatar || "/placeholder.svg?height=80&width=80").replace('http://', 'https://')}
               alt={user.username}
               className="w-20 h-20 rounded-full object-cover border-4 border-white/20"
             />
@@ -493,7 +493,7 @@ function DashboardPageContent() {
                 <div key={request._id} className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
                   <div className="flex items-center gap-4">
                     <img
-                      src={request.subscriber.avatar || "/placeholder.svg?height=50&width=50"}
+                      src={(request.subscriber.avatar || "/placeholder.svg?height=50&width=50").replace('http://', 'https://')}
                       alt={request.subscriber.username}
                       className="w-12 h-12 rounded-full object-cover"
                     />

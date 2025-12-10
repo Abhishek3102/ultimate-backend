@@ -312,7 +312,7 @@ function VideosPageContent() {
                     className="relative aspect-video bg-black/40 cursor-pointer"
                   >
                     <img
-                      src={video.thumbnail || "/placeholder.svg"}
+                      src={(video.thumbnail || "/placeholder.svg").replace('http://', 'https://')}
                       alt={video.title}
                       className="w-full h-full object-cover"
                     />
@@ -334,7 +334,7 @@ function VideosPageContent() {
                   <div className="p-4 flex flex-col flex-1">
                     <div className="flex items-start gap-3 mb-3">
                       <img
-                        src={video.owner?.avatar || "/placeholder.svg"}
+                        src={(video.owner?.avatar || "/placeholder.svg").replace('http://', 'https://')}
                         alt={video.owner?.username}
                         className="w-10 h-10 rounded-full object-cover shrink-0"
                       />
@@ -469,7 +469,7 @@ function VideosPageContent() {
 
                   <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
                     <video
-                      src={selectedVideo.videoFile}
+                      src={(selectedVideo.videoFile || "").replace('http://', 'https://')}
                       controls
                       autoPlay
                       className="w-full h-full"
@@ -480,7 +480,7 @@ function VideosPageContent() {
                     <h1 className="text-2xl font-bold text-white mb-2">{selectedVideo.title}</h1>
                     <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
                       <div className="flex items-center gap-3">
-                        <img src={selectedVideo.owner?.avatar || "/placeholder.svg"} className="w-12 h-12 rounded-full" />
+                        <img src={(selectedVideo.owner?.avatar || "/placeholder.svg").replace('http://', 'https://')} className="w-12 h-12 rounded-full" />
                         <div>
                           <h3 className="text-white font-medium">{selectedVideo.owner?.username}</h3>
                           <p className="text-white/60 text-sm">Owner</p>
@@ -530,7 +530,7 @@ function VideosPageContent() {
                       {commentsLoading && <div className="text-center text-white/50">Loading comments...</div>}
                       {!commentsLoading && videoComments.map(comment => (
                         <div key={comment._id} className="flex gap-3">
-                          <img src={comment.owner?.avatar || "/placeholder.svg"} className="w-8 h-8 rounded-full shrink-0" />
+                          <img src={(comment.owner?.avatar || "/placeholder.svg").replace('http://', 'https://')} className="w-8 h-8 rounded-full shrink-0" />
                           <div className="flex-1">
                             <div className="flex items-baseline justify-between">
                               <span className="text-white font-medium text-sm">{comment.owner?.username}</span>

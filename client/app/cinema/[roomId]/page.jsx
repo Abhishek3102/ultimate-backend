@@ -438,7 +438,7 @@ function CinemaPageContent() {
                         <div className="flex-1 aspect-video max-h-[70vh] relative shadow-2xl overflow-hidden bg-zinc-900 rounded-xl border border-white/5 group">
                             <video
                                 ref={videoRef}
-                                src={theater.video?.videoFile}
+                                src={(theater.video?.videoFile || "").replace('http://', 'https://')}
                                 className="w-full h-full object-contain bg-black"
                                 controls={isHost}
                                 playsInline
@@ -489,7 +489,7 @@ function CinemaPageContent() {
                                         ) : (
                                             <div className={`flex gap-2 ${msg.sender._id === user._id ? 'flex-row-reverse' : ''}`}>
                                                 <div title={msg.sender.username} className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center shrink-0 border border-white/10 overflow-hidden mt-1">
-                                                    {msg.sender.avatar ? <img src={msg.sender.avatar} className="w-full h-full object-cover" /> : <span className="text-[10px]">{msg.sender.username[0]}</span>}
+                                                    {msg.sender.avatar ? <img src={msg.sender.avatar.replace('http://', 'https://')} className="w-full h-full object-cover" /> : <span className="text-[10px]">{msg.sender.username[0]}</span>}
                                                 </div>
                                                 <div className={`flex-1 min-w-0 max-w-[85%] ${msg.sender._id === user._id ? 'items-end' : 'items-start'}`}>
                                                     <div className={`px-3 py-2 rounded-2xl text-xs break-words ${msg.sender._id === user._id ? 'bg-purple-600 text-white rounded-tr-sm' : 'bg-zinc-800 text-gray-200 rounded-tl-sm'}`}>

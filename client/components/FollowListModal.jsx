@@ -143,7 +143,7 @@ export default function FollowListModal({ isOpen, onClose, userId, type, title }
                                     <div key={user._id} className="flex items-center justify-between hover:bg-white/5 p-2 rounded-lg transition-colors group">
                                         <Link href={`/c/${user.username}`} onClick={onClose} className="flex items-center gap-3 flex-1 min-w-0">
                                             <img
-                                                src={user.avatar || "/placeholder.svg"}
+                                                src={(user.avatar || "/placeholder.svg").replace('http://', 'https://')}
                                                 alt={user.username}
                                                 className="w-10 h-10 rounded-full object-cover"
                                             />

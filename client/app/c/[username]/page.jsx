@@ -269,7 +269,7 @@ export default function ChannelProfile() {
             <div className="h-48 md:h-64 bg-gradient-to-r from-gray-800 to-gray-900 relative">
                 {profile.coverImage && (
                     <img
-                        src={profile.coverImage}
+                        src={profile.coverImage.replace('http://', 'https://')}
                         alt="Cover"
                         className="w-full h-full object-cover opacity-60"
                     />
@@ -281,7 +281,7 @@ export default function ChannelProfile() {
                 <div className="relative -mt-20 mb-8 flex flex-col md:flex-row items-end md:items-end gap-6 text-center md:text-left">
                     <div className="relative">
                         <img
-                            src={profile.avatar || "/placeholder.svg?height=160&width=160"}
+                            src={(profile.avatar || "/placeholder.svg?height=160&width=160").replace('http://', 'https://')}
                             alt={profile.username}
                             className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-[#1a1a1a] object-cover"
                         />
@@ -413,7 +413,7 @@ export default function ChannelProfile() {
                                                 onClick={() => openVideo(video)}
                                             >
                                                 <img
-                                                    src={video.thumbnail || "/placeholder.svg"}
+                                                    src={(video.thumbnail || "/placeholder.svg").replace('http://', 'https://')}
                                                     alt={video.title}
                                                     className="w-full h-full object-cover"
                                                 />
@@ -465,7 +465,7 @@ export default function ChannelProfile() {
                                         <div className="flex gap-4">
                                             <div className="flex-shrink-0">
                                                 <img
-                                                    src={profile.avatar || "/placeholder.svg"}
+                                                    src={(profile.avatar || "/placeholder.svg").replace('http://', 'https://')}
                                                     alt={profile.username}
                                                     className="w-12 h-12 rounded-full object-cover border border-white/10"
                                                 />
@@ -558,7 +558,7 @@ export default function ChannelProfile() {
 
                                     <div className="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
                                         <video
-                                            src={selectedVideo.videoFile}
+                                            src={(selectedVideo.videoFile || "").replace('http://', 'https://')}
                                             controls
                                             autoPlay
                                             className="w-full h-full"
@@ -569,7 +569,7 @@ export default function ChannelProfile() {
                                         <h1 className="text-2xl font-bold text-white mb-2">{selectedVideo.title}</h1>
                                         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
                                             <div className="flex items-center gap-3">
-                                                <img src={selectedVideo.owner?.avatar || "/placeholder.svg"} className="w-12 h-12 rounded-full" />
+                                                <img src={(selectedVideo.owner?.avatar || "/placeholder.svg").replace('http://', 'https://')} className="w-12 h-12 rounded-full" />
                                                 <div>
                                                     <h3 className="text-white font-medium">{selectedVideo.owner?.username}</h3>
                                                     <p className="text-white/60 text-sm">Owner</p>
@@ -604,7 +604,7 @@ export default function ChannelProfile() {
                                             {commentsLoading && <div className="text-center text-white/50">Loading comments...</div>}
                                             {!commentsLoading && videoComments.map(comment => (
                                                 <div key={comment._id} className="flex gap-3">
-                                                    <img src={comment.owner?.avatar || "/placeholder.svg"} className="w-8 h-8 rounded-full shrink-0" />
+                                                    <img src={(comment.owner?.avatar || "/placeholder.svg").replace('http://', 'https://')} className="w-8 h-8 rounded-full shrink-0" />
                                                     <div className="flex-1">
                                                         <div className="flex items-baseline justify-between">
                                                             <span className="text-white font-medium text-sm">{comment.owner?.username}</span>

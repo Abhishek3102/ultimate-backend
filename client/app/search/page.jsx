@@ -98,7 +98,7 @@ export default function SearchPage() {
                                         <div className="flex items-center gap-4">
                                             <div className="relative">
                                                 <img
-                                                    src={user.avatar || "/placeholder.svg?height=50&width=50"}
+                                                    src={(user.avatar || "/placeholder.svg?height=50&width=50").replace('http://', 'https://')}
                                                     alt={user.username}
                                                     className="w-12 h-12 rounded-full object-cover"
                                                 />
