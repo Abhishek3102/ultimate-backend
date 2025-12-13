@@ -21,6 +21,10 @@ export default function SpacesLobby() {
                 setSpaces(res.data || []);
             } catch (error) {
                 console.error("Failed to fetch spaces", error);
+                if (error.message.includes("Session expired") || error.message.includes("Unauthorized")) {
+                    // Redirect to login if session is invalid
+                    router.push("/auth"); // Assuming /auth is the login page
+                }
             } finally {
                 setLoading(false);
             }
@@ -41,6 +45,9 @@ export default function SpacesLobby() {
         } catch (error) {
             console.error("Failed to create space", error);
             setCreating(false);
+            if (error.message.includes("Session expired") || error.message.includes("Unauthorized")) {
+                router.push("/auth");
+            }
         }
     };
 

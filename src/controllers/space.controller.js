@@ -63,7 +63,12 @@ const updateSpaceState = asyncHandler(async (req, res) => {
     if (connections) space.connections = connections;
     if (backgroundUrl !== undefined) space.backgroundUrl = backgroundUrl;
 
-    await space.save();
+    try {
+        await space.save();
+    } catch (error) {
+        console.error(`[UPDATE SPACE ERROR] SpaceId: ${spaceId}`, error);
+        throw error;
+    }
 
     return res
         .status(200)

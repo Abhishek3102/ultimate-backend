@@ -1491,6 +1491,29 @@ class ApiClient {
     });
   }
 
+  // --- Space Endpoints ---
+  async createSpace(data) {
+    return this.request("/spaces", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getSpaceById(spaceId) {
+    return this.request(`/spaces/${spaceId}`);
+  }
+
+  async updateSpaceState(spaceId, data) {
+    return this.request(`/spaces/${spaceId}/state`, {
+        method: "PATCH",
+        body: JSON.stringify(data)
+    });
+  }
+
+  async getUserSpaces() {
+    return this.request("/spaces/u/current-user");
+  }
+
   // --- Mock Helpers ---
   mockChallengeDetails(id) {
     // Return the same data as the list, but maybe with more info if needed

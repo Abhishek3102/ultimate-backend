@@ -321,7 +321,7 @@ function CanvasNode({ node, connectionMode, onConnectStart, onConnectEnd, onSync
     useEffect(() => {
         if (node.type === 'video' && (!node.data?.url && !node.data?.videoFile)) {
             const fetchVideoDetails = async () => {
-                if (!node.contentId) return;
+                if (!node.contentId || node.data?.healAttempted) return; // Prevent infinite retries
                 try {
                     const res = await api.getVideoById(node.contentId);
                     if (res.data) {
@@ -332,12 +332,22 @@ function CanvasNode({ node, connectionMode, onConnectStart, onConnectEnd, onSync
                                 url: res.data.videoFile,
                                 thumbnail: res.data.thumbnail,
                                 title: res.data.title,
-                                description: res.data.description
+                                description: res.data.description,
+                                healAttempted: true
                             }
+                        });
+                    } else {
+                        // Mark as attempted even if no data returned (e.g. 404 handled gracefully)
+                        updateNode(node.id, {
+                            data: { ...node.data, healAttempted: true, error: "Video not found" }
                         });
                     }
                 } catch (err) {
                     console.error("Failed to auto-heal video node:", err);
+                    // Mark as attempted so we don't try again endlessly
+                    updateNode(node.id, {
+                        data: { ...node.data, healAttempted: true, error: "Load failed" }
+                    });
                 }
             };
             fetchVideoDetails();
